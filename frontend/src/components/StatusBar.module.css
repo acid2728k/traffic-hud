@@ -1,0 +1,72 @@
+.statusBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 2px solid #00ff00;
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.title {
+  font-family: 'Courier New', monospace;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #00ff00;
+  text-shadow: 0 0 10px #00ff00;
+  letter-spacing: 0.2em;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.statusIndicator {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #00ff00;
+  text-shadow: 0 0 5px #00ff00;
+}
+
+.statusIndicator.live {
+  color: #00ff00;
+  animation: pulse 2s infinite;
+}
+
+.statusIndicator.error {
+  color: #ff0000;
+  text-shadow: 0 0 5px #ff0000;
+}
+
+.statusIndicator.loading {
+  color: #ffff00;
+  text-shadow: 0 0 5px #ffff00;
+}
+
+.retryButton {
+  font-family: 'Courier New', monospace;
+  background: transparent;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.3s;
+}
+
+.retryButton:hover {
+  background: rgba(0, 255, 0, 0.1);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+

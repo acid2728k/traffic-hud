@@ -1,0 +1,110 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal {
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #00ff00;
+  box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #00ff00;
+  background: rgba(0, 255, 0, 0.05);
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #00ff00;
+  text-shadow: 0 0 10px #00ff00;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.closeButton {
+  background: transparent;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  width: 32px;
+  height: 32px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.closeButton:hover {
+  background: rgba(0, 255, 0, 0.1);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.content {
+  padding: 1.5rem;
+}
+
+.snapshotContainer {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.snapshot {
+  max-width: 100%;
+  max-height: 400px;
+  border: 2px solid #00ff00;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 1rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+.label {
+  color: #00ff00;
+  opacity: 0.8;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.value {
+  color: #00ff00;
+  font-size: 0.9rem;
+}
+
+.confidence {
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+

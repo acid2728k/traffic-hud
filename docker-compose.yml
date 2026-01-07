@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: traffic-hud-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/static/snapshots:/app/static/snapshots
+      - ./backend/roi_config.json:/app/roi_config.json
+      - ./backend/.env:/app/.env
+    environment:
+      - VIDEO_SOURCE_TYPE=${VIDEO_SOURCE_TYPE:-file}
+      - VIDEO_SOURCE_URL=${VIDEO_SOURCE_URL:-}
+      - VIDEO_SOURCE_FILE=${VIDEO_SOURCE_FILE:-}
+      - YOUTUBE_URL=${YOUTUBE_URL:-}
+    restart: unless-stopped
+    networks:
+      - traffic-hud-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: traffic-hud-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - traffic-hud-network
+
+networks:
+  traffic-hud-network:
+    driver: bridge
+
