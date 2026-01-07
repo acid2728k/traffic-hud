@@ -41,6 +41,13 @@ yarn-error.log*
 *~
 .DS_Store
 
+# Visual Studio files
+*.vsix
+*VSIXPackage*
+*.sln
+*.suo
+*.user
+
 # Snapshots
 backend/static/snapshots/*
 !backend/static/snapshots/.gitkeep
