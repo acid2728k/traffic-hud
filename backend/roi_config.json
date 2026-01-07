@@ -1,47 +1,56 @@
 {
+  "_comment": "ROI Configuration for Traffic Counting. Coordinates are in pixels. Adjust based on your video resolution.",
+  "_video_resolution": "Example: 1920x1080 (adjust coordinates for your video)",
+  "_calibration_tip": "Use video player with coordinate display or annotation tools (LabelImg, CVAT) to determine exact coordinates",
+  
   "left_side": {
     "name": "LEFT SIDE (TOWARD CAMERA)",
     "direction": "toward_camera",
     "roi": {
       "polygon": [
-        [100, 100],
-        [500, 100],
-        [500, 600],
-        [100, 600]
-      ]
+        [150, 300],
+        [850, 300],
+        [850, 900],
+        [150, 900]
+      ],
+      "_note": "Region covering left side of road where vehicles move toward camera. Adjust to match your video."
     },
     "counting_line": {
-      "start": [200, 200],
-      "end": [400, 200],
-      "direction": "toward_camera"
+      "start": [250, 600],
+      "end": [750, 600],
+      "direction": "toward_camera",
+      "_note": "Horizontal line that vehicles cross. For 'toward_camera', vehicles cross from higher Y to lower Y."
     },
     "lanes": [
       {
         "id": 1,
         "polygon": [
-          [100, 100],
-          [200, 100],
-          [200, 600],
-          [100, 600]
-        ]
+          [150, 300],
+          [383, 300],
+          [383, 900],
+          [150, 900]
+        ],
+        "_note": "Leftmost lane (closest to left edge)"
       },
       {
         "id": 2,
         "polygon": [
-          [200, 100],
-          [350, 100],
-          [350, 600],
-          [200, 600]
-        ]
+          [383, 300],
+          [616, 300],
+          [616, 900],
+          [383, 900]
+        ],
+        "_note": "Middle lane"
       },
       {
         "id": 3,
         "polygon": [
-          [350, 100],
-          [500, 100],
-          [500, 600],
-          [350, 600]
-        ]
+          [616, 300],
+          [850, 300],
+          [850, 900],
+          [616, 900]
+        ],
+        "_note": "Rightmost lane (closest to center)"
       }
     ]
   },
@@ -50,47 +59,51 @@
     "direction": "away_from_camera",
     "roi": {
       "polygon": [
-        [600, 100],
-        [1000, 100],
-        [1000, 600],
-        [600, 600]
-      ]
+        [1070, 300],
+        [1770, 300],
+        [1770, 900],
+        [1070, 900]
+      ],
+      "_note": "Region covering right side of road where vehicles move away from camera. Adjust to match your video."
     },
     "counting_line": {
-      "start": [700, 400],
-      "end": [900, 400],
-      "direction": "away_from_camera"
+      "start": [1170, 600],
+      "end": [1670, 600],
+      "direction": "away_from_camera",
+      "_note": "Horizontal line that vehicles cross. For 'away_from_camera', vehicles cross from lower Y to higher Y."
     },
     "lanes": [
       {
         "id": 1,
         "polygon": [
-          [600, 100],
-          [733, 100],
-          [733, 600],
-          [600, 600]
-        ]
+          [1070, 300],
+          [1303, 300],
+          [1303, 900],
+          [1070, 900]
+        ],
+        "_note": "Leftmost lane (closest to center)"
       },
       {
         "id": 2,
         "polygon": [
-          [733, 100],
-          [866, 100],
-          [866, 600],
-          [733, 600]
-        ]
+          [1303, 300],
+          [1536, 300],
+          [1536, 900],
+          [1303, 900]
+        ],
+        "_note": "Middle lane"
       },
       {
         "id": 3,
         "polygon": [
-          [866, 100],
-          [1000, 100],
-          [1000, 600],
-          [866, 600]
-        ]
+          [1536, 300],
+          [1770, 300],
+          [1770, 900],
+          [1536, 900]
+        ],
+        "_note": "Rightmost lane (closest to right edge)"
       }
     ]
   },
-  "note": "Координаты в пикселях. Для калибровки используйте инструменты разметки или откройте видео и определите координаты вручную."
+  "note": "IMPORTANT: These are example coordinates for 1920x1080 video. You MUST calibrate these values for your specific video source. See CALIBRATION.md for detailed instructions."
 }
-
