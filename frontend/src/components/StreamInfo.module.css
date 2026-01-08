@@ -1,0 +1,37 @@
+.streamInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #00ff00;
+}
+
+.location {
+  color: #00ff00;
+  text-shadow: 0 0 3px #00ff00;
+  opacity: 0.9;
+}
+
+.time {
+  color: #00ff00;
+  text-shadow: 0 0 3px #00ff00;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.date {
+  color: #00ff00;
+  text-shadow: 0 0 3px #00ff00;
+  opacity: 0.8;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+

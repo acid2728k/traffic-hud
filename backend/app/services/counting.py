@@ -216,9 +216,8 @@ class TrafficCounter:
                     
                     events.append(event)
                     
-                    # Вызываем callback
-                    if on_event:
-                        on_event(event)
+                    # Callback вызывается в main.py после process_frame
+                    # (убрали отсюда для правильной async обработки)
         
         return events
     

@@ -1,0 +1,37 @@
+.weather {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #00ff00;
+}
+
+
+.temperature {
+  color: #00ff00;
+  text-shadow: 0 0 5px #00ff00;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.condition {
+  color: #00ff00;
+  text-shadow: 0 0 3px #00ff00;
+  opacity: 0.9;
+  text-transform: uppercase;
+}
+
+.details {
+  display: flex;
+  gap: 1rem;
+  color: #00ff00;
+  opacity: 0.8;
+  font-size: 0.7rem;
+}
+
+.loading {
+  color: #00ff00;
+  opacity: 0.5;
+}
+

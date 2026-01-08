@@ -1,46 +1,98 @@
 .app {
   min-height: 100vh;
-  background: #000;
-  color: #00ff00;
-  display: flex;
-  flex-direction: column;
+  width: 100vw;
   position: relative;
   overflow: hidden;
 }
 
-.app::before {
-  content: '';
+.videoContainer {
+  position: fixed;
+  top: 0;
+  left: 280px; /* Начинается после левой панели */
+  width: calc(100vw - 560px); /* Ширина минус две панели по 280px */
+  height: 100vh;
+  z-index: 0;
+  background: #000;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  border: none;
+  object-fit: cover;
+}
+
+.overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
+  width: 100%;
+  height: 100%;
+  color: #00ff00;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
   pointer-events: none;
+  background: transparent;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+/* Черный фон под левой панелью */
+.overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100%;
+  background: #000;
   z-index: 0;
 }
 
-.app::after {
+/* Черный фон под правой панелью */
+.overlay::after {
   content: '';
-  position: fixed;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100%;
+  background: #000;
+  z-index: 0;
+}
+
+
+/* Сетка и сканлайны */
+.gridOverlay {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  pointer-events: none;
+  z-index: 1;
+  background-image: 
+    linear-gradient(rgba(0, 255, 0, 0.02) 0.25px, transparent 0.25px),
+    linear-gradient(90deg, rgba(0, 255, 0, 0.02) 0.25px, transparent 0.25px),
     repeating-linear-gradient(
       0deg,
       transparent,
-      transparent 2px,
-      rgba(0, 255, 0, 0.03) 2px,
-      rgba(0, 255, 0, 0.03) 4px
+      transparent 0.5px,
+      rgba(0, 255, 0, 0.02) 0.5px,
+      rgba(0, 255, 0, 0.02) 1px
     );
-  pointer-events: none;
-  z-index: 0;
+  background-size: 12.5px 12.5px, 12.5px 12.5px, 100% 100%;
   animation: scanlines 8s linear infinite;
+}
+
+.topSection {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes scanlines {
@@ -55,36 +107,52 @@
 .content {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  padding: 2rem;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+  padding: 0;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .leftPanel,
 .rightPanel {
-  height: calc(100vh - 200px);
-  min-height: 500px;
+  width: 280px;
+  height: calc(100vh - 80px);
+  min-height: 300px;
+  background: #000;
+}
+
+.centerSpace {
+  /* Пустое пространство для видео - видео видно только здесь */
+  position: relative;
+  overflow: hidden;
+  background: transparent;
 }
 
 .footer {
-  padding: 1rem 2rem;
-  border-top: 2px solid #00ff00;
-  background: rgba(0, 0, 0, 0.8);
+  border-top: 1px solid #00ff00;
+  background: #000;
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.footerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .accessDenied {
   font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: #00ff00;
   opacity: 0.3;
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.3em;
-  text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
 }
 
 @media (max-width: 1200px) {
@@ -92,4 +160,3 @@
     grid-template-columns: 1fr;
   }
 }
-

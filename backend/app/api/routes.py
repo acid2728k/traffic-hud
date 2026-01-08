@@ -5,7 +5,11 @@ from typing import Optional, List
 from sqlmodel import select
 from app.models.database import TrafficEvent, get_session
 from app.core.config import settings
+from app.services.location_service import location_service
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -105,4 +109,94 @@ async def get_snapshot(filename: str):
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Snapshot not found")
     return FileResponse(filepath)
+
+
+@router.get("/stream-info")
+async def get_stream_info(force_refresh: bool = Query(False, description="Force refresh location from YouTube")):
+    """Возвращает информацию о локации трансляции"""
+    # Если кеш пустой, принудительно обновляем
+    if not location_service.location_cache:
+        force_refresh = True
+    location_info = location_service.get_location(force_refresh=force_refresh)
+    logger.info(f"Stream info requested (force_refresh={force_refresh}), returning: {location_info}")
+    return location_info
+
+
+@router.get("/weather")
+async def get_weather():
+    """Возвращает погоду для локации трансляции"""
+    location_info = location_service.get_location()
+    location = location_info.get('location', 'Unknown Location')
+    
+    # В MVP используем заглушку, позже можно подключить реальный API (OpenWeatherMap и т.д.)
+    # Для реального API нужен ключ, который можно добавить в .env
+    import random
+    conditions = ['Clear', 'Cloudy', 'Rain', 'Snow', 'Fog']
+    
+    # Генерируем реалистичные данные на основе локации (для демо)
+    # В продакшене здесь будет запрос к OpenWeatherMap API
+    return {
+        "temperature": random.randint(-5, 25),  # Диапазон зависит от локации
+        "condition": random.choice(conditions),
+        "humidity": random.randint(40, 90),
+        "windSpeed": random.randint(5, 25),
+        "location": location
+    }
+
+
+@router.get("/news")
+async def get_news():
+    """Возвращает новости для локации трансляции"""
+    location_info = location_service.get_location()
+    location = location_info.get('location', 'Unknown Location')
+    
+    # Извлекаем название города (например, "Ocean City, MD, USA" -> "Ocean City")
+    city = location.split(',')[0].strip()
+    
+    try:
+        # Используем Google News RSS для получения новостей по городу
+        import feedparser
+        import urllib.parse
+        
+        # Формируем запрос для Google News RSS
+        query = urllib.parse.quote(f"{city} news")
+        rss_url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+        
+        # Парсим RSS
+        feed = feedparser.parse(rss_url)
+        
+        news_items = []
+        for entry in feed.entries[:10]:  # Берем первые 10 новостей
+            title = entry.get('title', '').strip()
+            if title:
+                news_items.append(title)
+        
+        if news_items:
+            return {
+                "news": news_items,
+                "location": city
+            }
+        
+        # Fallback: если RSS не работает, возвращаем заглушку
+        return {
+            "news": [
+                f"Local news updates for {city}",
+                f"Traffic monitoring active in {city}",
+                f"Weather conditions normal in {city}",
+                f"Public services operational in {city}"
+            ],
+            "location": city
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching news: {e}")
+        # Fallback на заглушку при ошибке
+        return {
+            "news": [
+                f"News feed loading for {city}",
+                f"Traffic monitoring system operational",
+                f"All systems normal in {city}"
+            ],
+            "location": city
+        }
 

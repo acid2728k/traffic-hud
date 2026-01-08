@@ -21,5 +21,20 @@ export const api = {
     const response = await axios.get(`${API_BASE}/events/${eventId}`)
     return response.data
   },
+
+  getStreamInfo: async (): Promise<{ location: string; timezone: string }> => {
+    const response = await axios.get(`${API_BASE}/stream-info`)
+    return response.data
+  },
+
+  getWeather: async (): Promise<{ temperature: number; condition: string; humidity: number; windSpeed: number; location: string }> => {
+    const response = await axios.get(`${API_BASE}/weather`)
+    return response.data
+  },
+
+  getNews: async (): Promise<{ news: string[]; location: string }> => {
+    const response = await axios.get(`${API_BASE}/news`)
+    return response.data
+  },
 }
 

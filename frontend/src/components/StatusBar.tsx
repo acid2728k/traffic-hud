@@ -1,21 +1,27 @@
 import React from 'react'
+import { StreamInfo } from './StreamInfo'
+import { Weather } from './Weather'
+import { NewsTicker } from './NewsTicker'
 import styles from './StatusBar.module.css'
 
 interface StatusBarProps {
   status: 'live' | 'error' | 'loading'
   onRetry?: () => void
+  location?: string // Оставлено для совместимости, но не используется
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({ status, onRetry }) => {
   return (
     <div className={styles.statusBar}>
-      <div className={styles.title}>TRAFFIC HUD</div>
-      <div className={styles.status}>
-        <span className={`${styles.statusIndicator} ${styles[status]}`}>
-          {status === 'live' && '● STREAM: LIVE'}
-          {status === 'error' && '● STREAM: ERROR'}
-          {status === 'loading' && '● STREAM: CONNECTING...'}
-        </span>
+      <div className={styles.leftSection}>
+        <StreamInfo />
+        <Weather />
+      </div>
+      <div className={styles.centerSection}>
+        <NewsTicker />
+      </div>
+      <div className={styles.rightSection}>
+        <div className={styles.liveBadge}>● LIVE</div>
         {status === 'error' && onRetry && (
           <button className={styles.retryButton} onClick={onRetry}>
             RETRY

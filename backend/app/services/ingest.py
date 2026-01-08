@@ -24,13 +24,19 @@ class VideoIngest:
         """Получает прямую ссылку на HLS/manifest через yt-dlp"""
         try:
             ydl_opts = {
-                'format': 'best[ext=mp4]/best',
+                'format': 'best[height<=720]/best[height<=1080]/best',  # Ограничиваем качество для производительности
                 'quiet': True,
                 'no_warnings': True,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                return info.get('url', '')
+                # Пробуем получить HLS URL или прямую ссылку
+                if 'url' in info:
+                    return info['url']
+                elif 'requested_formats' in info and len(info['requested_formats']) > 0:
+                    return info['requested_formats'][0].get('url', '')
+                else:
+                    raise ValueError("Could not extract stream URL from YouTube")
         except Exception as e:
             logger.error(f"Error getting YouTube stream URL: {e}")
             raise
@@ -45,13 +51,21 @@ class VideoIngest:
         elif self.source_type == "youtube_url":
             if not self.source_url:
                 raise ValueError("YouTube URL not provided")
-            stream_url = self._get_youtube_stream_url(self.source_url)
-            # Используем OpenCV для YouTube (может работать с некоторыми потоками)
-            # Альтернатива: использовать ffmpeg pipe, но это сложнее
-            self.cap = cv2.VideoCapture(stream_url)
-            if not self.cap.isOpened():
-                # Fallback: используем yt-dlp для скачивания и локального воспроизведения
-                raise ValueError("Failed to open YouTube stream. Consider using HLS URL or local file.")
+            logger.info(f"Opening YouTube stream: {self.source_url}")
+            try:
+                stream_url = self._get_youtube_stream_url(self.source_url)
+                logger.info(f"Got stream URL, opening with OpenCV...")
+                # Используем OpenCV для YouTube
+                self.cap = cv2.VideoCapture(stream_url)
+                # Устанавливаем таймаут для подключения
+                self.cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 10000)
+                if not self.cap.isOpened():
+                    logger.error("Failed to open YouTube stream with OpenCV")
+                    raise ValueError("Failed to open YouTube stream. Consider using HLS URL or local file.")
+                logger.info("YouTube stream opened successfully")
+            except Exception as e:
+                logger.error(f"Error opening YouTube stream: {e}")
+                raise
             
         elif self.source_type == "hls_url":
             if not self.source_url:

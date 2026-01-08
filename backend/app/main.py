@@ -46,12 +46,16 @@ counter = None
 processing_task = None
 
 
-def on_new_event(event: dict):
+async def on_new_event(event: dict):
     """Callback при новом событии - отправляет через WebSocket"""
-    asyncio.create_task(manager.broadcast({
-        "type": "event_created",
-        "payload": event
-    }))
+    try:
+        await manager.broadcast({
+            "type": "event_created",
+            "payload": event
+        })
+        logger.info(f"Broadcasted event: track_id={event.get('track_id')}, side={event.get('side')}")
+    except Exception as e:
+        logger.error(f"Error broadcasting event: {e}")
 
 
 async def process_video_loop():
@@ -62,12 +66,21 @@ async def process_video_loop():
         try:
             if ingest is None or not ingest.is_opened():
                 logger.info("Initializing video ingest...")
-                ingest = VideoIngest()
-                ingest._open_stream()
-                detector = VehicleDetector()
-                tracker = SimpleTracker()
-                counter = TrafficCounter()
-                logger.info("Video ingest initialized")
+                try:
+                    ingest = VideoIngest()
+                    ingest._open_stream()
+                    if not ingest.is_opened():
+                        raise ValueError("Video stream not opened")
+                    detector = VehicleDetector()
+                    logger.info("YOLO model loaded")
+                    tracker = SimpleTracker()
+                    counter = TrafficCounter()
+                    logger.info("Video ingest initialized successfully")
+                except Exception as e:
+                    logger.error(f"Error initializing video ingest: {e}", exc_info=True)
+                    ingest = None
+                    await asyncio.sleep(5)
+                    continue
             
             frame = ingest.read_frame()
             if frame is None:
@@ -79,12 +92,21 @@ async def process_video_loop():
             
             # Детекция
             detections = detector.detect(frame)
+            if detections:
+                logger.debug(f"Detected {len(detections)} vehicles in frame")
             
             # Трекинг
             tracked = tracker.update(detections)
+            if tracked:
+                logger.debug(f"Tracking {len(tracked)} vehicles")
             
             # Подсчет
-            events = counter.process_frame(frame, tracked, on_event=on_new_event)
+            # Создаем список событий для асинхронной обработки
+            events = counter.process_frame(frame, tracked, on_event=None)
+            
+            # Отправляем события через WebSocket асинхронно
+            for event in events:
+                await on_new_event(event)
             
             if events:
                 logger.info(f"Detected {len(events)} new events")
@@ -106,6 +128,11 @@ async def startup_event():
     logger.info("Initializing database...")
     init_db()
     logger.info("Database initialized")
+    
+    # Очищаем кеш локации при старте, чтобы определить локацию из YouTube
+    from app.services.location_service import location_service
+    location_service.location_cache = None
+    logger.info("Location cache cleared, will be determined from YouTube on first request")
     
     # Запускаем обработку видео в фоне
     global processing_task
