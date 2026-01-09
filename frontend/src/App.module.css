@@ -20,6 +20,10 @@
   height: 100%;
   border: none;
   object-fit: cover;
+  background: #000;
+  display: block;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 .overlay {

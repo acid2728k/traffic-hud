@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Header } from './components/Header'
 import { StatusBar } from './components/StatusBar'
 import { SidePanel } from './components/SidePanel'
@@ -13,6 +13,17 @@ function App() {
   const [rightEvents, setRightEvents] = useState<TrafficEvent[]>([])
   const [status, setStatus] = useState<'live' | 'error' | 'loading'>('loading')
   const [streamInfo, setStreamInfo] = useState<{ location: string; timezone: string; city: string } | null>(null)
+  const videoImgRef = useRef<HTMLImageElement>(null)
+  const [videoError, setVideoError] = useState(false)
+
+  // Обновление видео стрима - вынесено на верхний уровень
+  const updateVideoStream = useCallback(() => {
+    const img = videoImgRef.current
+    if (img && !videoError) {
+      // Добавляем timestamp для обхода кеша
+      img.src = `/api/video-stream?t=${Date.now()}`
+    }
+  }, [videoError])
 
   const loadData = async () => {
     try {
@@ -88,24 +99,49 @@ function App() {
       }
     })
 
+    // Обновляем кадр каждые 100ms (~10 FPS) только если нет ошибки
+    let videoInterval: NodeJS.Timeout | null = null
+    if (!videoError) {
+      videoInterval = setInterval(updateVideoStream, 100)
+      // Первая загрузка
+      updateVideoStream()
+    }
+
     return () => {
       clearInterval(pollingInterval)
       clearInterval(streamInfoInterval)
+      if (videoInterval) clearInterval(videoInterval)
       unsubscribe()
       wsService.disconnect()
     }
-  }, [])
+  }, [updateVideoStream, videoError])
 
   return (
     <div className={styles.app}>
-      {/* Video background */}
+      {/* Video background with computer vision overlay */}
       <div className={styles.videoContainer}>
-        <iframe
-          className={styles.video}
-          src="https://www.youtube.com/embed/H0Z6faxNLCI?autoplay=1&mute=1&controls=0&loop=1&playlist=H0Z6faxNLCI"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-        />
+        {videoError ? (
+          <iframe
+            className={styles.video}
+            src="https://www.youtube.com/embed/H0Z6faxNLCI?autoplay=1&mute=1&controls=0&loop=1&playlist=H0Z6faxNLCI"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        ) : (
+          <img
+            ref={videoImgRef}
+            className={styles.video}
+            alt="Traffic stream with detections"
+            style={{ objectFit: 'cover' }}
+            onError={(e) => {
+              console.error('Video stream error, switching to YouTube fallback...')
+              setVideoError(true)
+            }}
+            onLoad={() => {
+              setVideoError(false)
+            }}
+          />
+        )}
       </div>
       
       {/* UI Overlay */}

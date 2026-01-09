@@ -45,6 +45,10 @@ tracker = None
 counter = None
 processing_task = None
 
+# Глобальный буфер для последнего обработанного кадра с детекциями
+current_frame_with_detections = None
+current_detections = []
+
 
 async def on_new_event(event: dict):
     """Callback при новом событии - отправляет через WebSocket"""
@@ -99,6 +103,16 @@ async def process_video_loop():
             tracked = tracker.update(detections)
             if tracked:
                 logger.debug(f"Tracking {len(tracked)} vehicles")
+            
+            # Рисуем детекции на кадре для стриминга
+            from app.utils.video_drawer import draw_detections, draw_counting_lines
+            frame_with_detections = draw_detections(frame.copy(), tracked, show_track_id=True, show_confidence=True)
+            frame_with_detections = draw_counting_lines(frame_with_detections, counter.roi_config)
+            
+            # Сохраняем кадр и детекции для стриминга
+            global current_frame_with_detections, current_detections
+            current_frame_with_detections = frame_with_detections
+            current_detections = tracked
             
             # Подсчет
             # Создаем список событий для асинхронной обработки

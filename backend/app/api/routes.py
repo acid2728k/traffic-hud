@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from datetime import datetime, timedelta
 from typing import Optional, List
 from sqlmodel import select
@@ -8,6 +8,9 @@ from app.core.config import settings
 from app.services.location_service import location_service
 import os
 import logging
+import cv2
+import numpy as np
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -200,3 +203,65 @@ async def get_news():
             "location": city
         }
 
+
+@router.get("/video-stream")
+async def video_stream():
+    """
+    MJPEG stream обработанного видео с детекциями.
+    Используется для отображения видео с bounding boxes в браузере.
+    """
+    from app.main import current_frame_with_detections
+    
+    try:
+        frame = current_frame_with_detections
+        if frame is not None and frame.size > 0:
+            # Кодируем кадр в JPEG
+            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if ret:
+                frame_bytes = buffer.tobytes()
+                return Response(content=frame_bytes, media_type="image/jpeg")
+        
+        # Если кадра нет, отправляем черный кадр с текстом
+        black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(black_frame, "Waiting for video...", (150, 240), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        ret, buffer = cv2.imencode('.jpg', black_frame)
+        if ret:
+            frame_bytes = buffer.tobytes()
+            return Response(content=frame_bytes, media_type="image/jpeg")
+    except Exception as e:
+        logger.error(f"Error generating frame: {e}")
+        # Отправляем ошибку как изображение
+        error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(error_frame, f"Error: {str(e)[:30]}", (50, 240), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        ret, buffer = cv2.imencode('.jpg', error_frame)
+        if ret:
+            frame_bytes = buffer.tobytes()
+            return Response(content=frame_bytes, media_type="image/jpeg")
+    
+    # Fallback
+    black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    ret, buffer = cv2.imencode('.jpg', black_frame)
+    return Response(content=buffer.tobytes(), media_type="image/jpeg")
+
+
+@router.get("/detections")
+async def get_current_detections():
+    """
+    Возвращает текущие детекции для отображения в UI.
+    """
+    from app.main import current_detections
+    
+    return {
+        "detections": [
+            {
+                "bbox": det.get("bbox", []),
+                "class": det.get("class", "unknown"),
+                "confidence": det.get("confidence", 0.0),
+                "track_id": det.get("track_id", None)
+            }
+            for det in current_detections
+        ],
+        "count": len(current_detections)
+    }
