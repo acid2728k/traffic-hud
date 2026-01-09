@@ -221,10 +221,25 @@ async def video_stream():
                 frame_bytes = buffer.tobytes()
                 return Response(content=frame_bytes, media_type="image/jpeg")
         
-        # If no frame, send black frame with text
-        black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        cv2.putText(black_frame, "Waiting for video...", (150, 240), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        # If no frame, send status frame with text
+        from app.main import ingest, detector, tracker
+        status_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        
+        # Check status
+        if ingest is None or not ingest.is_opened():
+            status_text = "Connecting to video stream..."
+            color = (0, 255, 255)  # Yellow
+        elif detector is None:
+            status_text = "Loading YOLO model..."
+            color = (0, 255, 255)  # Yellow
+        else:
+            status_text = "Waiting for video frame..."
+            color = (0, 255, 0)  # Green
+        
+        cv2.putText(status_frame, status_text, (50, 220), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+        cv2.putText(status_frame, "Check backend logs for details", (50, 260), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (128, 128, 128), 1)
         ret, buffer = cv2.imencode('.jpg', black_frame)
         if ret:
             frame_bytes = buffer.tobytes()

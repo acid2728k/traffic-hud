@@ -81,9 +81,12 @@ async def process_video_loop():
                     counter = TrafficCounter()
                     logger.info("Video ingest initialized successfully")
                 except Exception as e:
-                    logger.error(f"Error initializing video ingest: {e}", exc_info=True)
+                    logger.error(f"Error initializing video ingest: {e}", exc_info=False)
+                    # Log only first line of error to avoid spam
+                    error_msg = str(e).split('\n')[0] if '\n' in str(e) else str(e)
+                    logger.warning(f"Will retry video ingest in 10 seconds. Error: {error_msg[:100]}")
                     ingest = None
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(10)  # Longer wait before retry
                     continue
             
             frame = ingest.read_frame()
@@ -95,14 +98,24 @@ async def process_video_loop():
                 continue
             
             # Detection
+            if detector is None:
+                logger.error("Detector not initialized!")
+                await asyncio.sleep(1)
+                continue
+                
             detections = detector.detect(frame)
             if detections:
-                logger.debug(f"Detected {len(detections)} vehicles in frame")
+                logger.info(f"Detected {len(detections)} vehicles in frame")
             
             # Tracking
+            if tracker is None:
+                logger.error("Tracker not initialized!")
+                await asyncio.sleep(1)
+                continue
+                
             tracked = tracker.update(detections)
             if tracked:
-                logger.debug(f"Tracking {len(tracked)} vehicles")
+                logger.info(f"Tracking {len(tracked)} vehicles")
             
             # Draw detections on frame for streaming
             from app.utils.video_drawer import draw_detections, draw_counting_lines

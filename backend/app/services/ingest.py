@@ -21,25 +21,39 @@ class VideoIngest:
         self.frame_skip = max(1, int(30 / self.fps))  # Frame skip for performance
         
     def _get_youtube_stream_url(self, url: str) -> str:
-        """Gets direct HLS/manifest URL via yt-dlp"""
-        try:
-            ydl_opts = {
-                'format': 'best[height<=720]/best[height<=1080]/best',  # Limit quality for performance
-                'quiet': True,
-                'no_warnings': True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                # Try to get HLS URL or direct link
-                if 'url' in info:
-                    return info['url']
-                elif 'requested_formats' in info and len(info['requested_formats']) > 0:
-                    return info['requested_formats'][0].get('url', '')
+        """Gets direct HLS/manifest URL via yt-dlp with retries"""
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                ydl_opts = {
+                    'format': 'worst[height<=480]/worst[height<=720]/worst',  # Lower quality for faster connection
+                    'quiet': True,
+                    'no_warnings': True,
+                    'socket_timeout': 20,  # Shorter timeout
+                    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},  # Try mobile client
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    # Try to get HLS URL or direct link
+                    if 'url' in info:
+                        stream_url = info['url']
+                        logger.info(f"Successfully got YouTube stream URL (attempt {attempt + 1})")
+                        return stream_url
+                    elif 'requested_formats' in info and len(info['requested_formats']) > 0:
+                        stream_url = info['requested_formats'][0].get('url', '')
+                        if stream_url:
+                            logger.info(f"Successfully got YouTube stream URL from formats (attempt {attempt + 1})")
+                            return stream_url
+                    else:
+                        raise ValueError("Could not extract stream URL from YouTube")
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying...")
+                    import time
+                    time.sleep(2)  # Wait before retry
                 else:
-                    raise ValueError("Could not extract stream URL from YouTube")
-        except Exception as e:
-            logger.error(f"Error getting YouTube stream URL: {e}")
-            raise
+                    logger.error(f"All {max_retries} attempts failed. Last error: {e}")
+                    raise ValueError(f"Failed to get YouTube stream after {max_retries} attempts: {e}")
     
     def _open_stream(self):
         """Opens video stream depending on source type"""
@@ -58,13 +72,22 @@ class VideoIngest:
                 # Use OpenCV for YouTube
                 self.cap = cv2.VideoCapture(stream_url)
                 # Set connection timeout
-                self.cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 10000)
+                self.cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 15000)
+                # Try to read a frame to verify connection
+                ret, test_frame = self.cap.read()
+                if not ret or test_frame is None:
+                    logger.warning("Failed to read test frame, retrying...")
+                    self.cap.release()
+                    self.cap = cv2.VideoCapture(stream_url)
+                    self.cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 15000)
+                
                 if not self.cap.isOpened():
                     logger.error("Failed to open YouTube stream with OpenCV")
                     raise ValueError("Failed to open YouTube stream. Consider using HLS URL or local file.")
                 logger.info("YouTube stream opened successfully")
             except Exception as e:
                 logger.error(f"Error opening YouTube stream: {e}")
+                # Don't raise immediately - let the retry mechanism handle it
                 raise
             
         elif self.source_type == "hls_url":
