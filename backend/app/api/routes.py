@@ -214,12 +214,18 @@ async def video_stream():
     
     try:
         frame = current_frame_with_detections
-        if frame is not None and frame.size > 0:
-            # Encode frame to JPEG
-            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            if ret:
-                frame_bytes = buffer.tobytes()
-                return Response(content=frame_bytes, media_type="image/jpeg")
+        if frame is not None:
+            # Check if frame is valid numpy array
+            if hasattr(frame, 'size') and frame.size > 0:
+                # Encode frame to JPEG
+                ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                if ret:
+                    frame_bytes = buffer.tobytes()
+                    return Response(content=frame_bytes, media_type="image/jpeg")
+                else:
+                    logger.warning("Failed to encode frame to JPEG")
+            else:
+                logger.warning(f"Frame has invalid size: {frame.size if hasattr(frame, 'size') else 'no size attr'}")
         
         # If no frame, send status frame with text
         from app.main import ingest, detector, tracker
