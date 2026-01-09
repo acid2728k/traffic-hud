@@ -1,17 +1,17 @@
 #!/bin/bash
 
-# Скрипт для скачивания тестового видео
-# Использует yt-dlp для скачивания короткого видео с дорожным движением
+# Script to download test video
+# Uses yt-dlp to download a short traffic video
 
 echo "Downloading test video for Traffic HUD..."
 echo "This will download a short traffic video for testing purposes."
 
-# Пример: скачать короткое видео с YouTube (можно заменить на другой источник)
-# Убедитесь, что yt-dlp установлен: pip install yt-dlp
+# Example: download short video from YouTube (can be replaced with another source)
+# Make sure yt-dlp is installed: pip install yt-dlp
 
 if command -v yt-dlp &> /dev/null; then
-    # Скачиваем короткое видео (пример - замените на актуальное видео с дорожным движением)
-    # Используем формат mp4 и ограничиваем длину до 2 минут для тестирования
+    # Download short video (example - replace with actual traffic video)
+    # Use mp4 format and limit length to 2 minutes for testing
     yt-dlp -f "best[ext=mp4]" \
            --no-playlist \
            --extract-flat \
