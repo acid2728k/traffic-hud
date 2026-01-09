@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 # Colors for different vehicle types
 VEHICLE_COLORS = {
@@ -15,20 +15,39 @@ TRACK_COLOR = (0, 255, 255)  # Cyan
 
 
 def draw_detections(frame: np.ndarray, detections: List[Dict], 
-                   show_track_id: bool = True, show_confidence: bool = True) -> np.ndarray:
+                   show_track_id: bool = True, show_confidence: bool = True,
+                   track_histories: Optional[Dict[int, List[Tuple[float, float]]]] = None) -> np.ndarray:
     """
-    Draws bounding boxes and labels on frame.
+    Draws bounding boxes, labels, and track trails on frame.
     
     Args:
         frame: Input frame (BGR)
         detections: List of detections [{"bbox": [x1,y1,x2,y2], "class": "car", "confidence": 0.9, "track_id": 1}, ...]
         show_track_id: Whether to show track_id
         show_confidence: Whether to show confidence
+        track_histories: Optional dict of track_id -> list of (x, y) centroids for drawing trails
     
     Returns:
-        Frame with drawn bounding boxes
+        Frame with drawn bounding boxes and trails
     """
     frame_copy = frame.copy()
+    
+    # Draw track trails first (so boxes appear on top)
+    if track_histories:
+        for track_id, history in track_histories.items():
+            if len(history) < 2:
+                continue
+            
+            # Draw trail with fading opacity
+            for i in range(len(history) - 1):
+                p1 = (int(history[i][0]), int(history[i][1]))
+                p2 = (int(history[i + 1][0]), int(history[i + 1][1]))
+                
+                # Fade trail: older points are more transparent
+                alpha = 0.3 + (i / len(history)) * 0.5  # 0.3 to 0.8
+                color = tuple(int(c * alpha) for c in TRACK_COLOR)
+                
+                cv2.line(frame_copy, p1, p2, color, 2)
     
     for det in detections:
         bbox = det.get("bbox", [])

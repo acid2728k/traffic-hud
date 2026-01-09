@@ -106,7 +106,20 @@ async def process_video_loop():
             
             # Draw detections on frame for streaming
             from app.utils.video_drawer import draw_detections, draw_counting_lines
-            frame_with_detections = draw_detections(frame.copy(), tracked, show_track_id=True, show_confidence=True)
+            # Get track histories from tracker for visualization
+            track_histories = {}
+            if tracker and hasattr(tracker, 'tracks'):
+                for track_id, track in tracker.tracks.items():
+                    if "history" in track and len(track["history"]) > 0:
+                        track_histories[track_id] = track["history"]
+            
+            frame_with_detections = draw_detections(
+                frame.copy(), 
+                tracked, 
+                show_track_id=True, 
+                show_confidence=True,
+                track_histories=track_histories
+            )
             frame_with_detections = draw_counting_lines(frame_with_detections, counter.roi_config)
             
             # Save frame and detections for streaming
