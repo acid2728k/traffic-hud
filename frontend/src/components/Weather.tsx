@@ -10,7 +10,7 @@ interface WeatherData {
 }
 
 interface WeatherProps {
-  location?: string // Оставлено для совместимости, но не используется (backend сам определяет локацию)
+  location?: string // Kept for compatibility, but not used (backend determines location itself)
 }
 
 export const Weather: React.FC<WeatherProps> = () => {
@@ -36,10 +36,10 @@ export const Weather: React.FC<WeatherProps> = () => {
     }
 
     fetchWeather()
-    // Обновляем каждые 5 минут
+    // Update every 5 minutes
     const interval = setInterval(fetchWeather, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, []) // Убрали location из зависимостей, так как backend сам определяет локацию
+  }, []) // Removed location from dependencies, as backend determines location itself
 
   if (loading || !weather) {
     return (

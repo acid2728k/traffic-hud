@@ -8,8 +8,8 @@ export class WebSocketService {
   private listeners: Set<(message: WebSocketMessage) => void> = new Set()
 
   connect() {
-    // Используем прокси через Vite (относительный путь)
-    // Vite проксирует /ws на ws://localhost:8000
+    // Use proxy through Vite (relative path)
+    // Vite proxies /ws to ws://localhost:8000
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = import.meta.env.VITE_WS_URL || 
       `${wsProtocol}//${window.location.host}/ws/events`

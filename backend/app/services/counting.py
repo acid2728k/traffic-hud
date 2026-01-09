@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 class TrafficCounter:
     def __init__(self):
         self.roi_config = self._load_roi_config()
-        self.counted_tracks: Dict[int, bool] = {}  # track_id -> уже посчитан
-        self.track_history: Dict[int, List[Tuple[float, float]]] = {}  # track_id -> список (x, y) центров
+        self.counted_tracks: Dict[int, bool] = {}  # track_id -> already counted
+        self.track_history: Dict[int, List[Tuple[float, float]]] = {}  # track_id -> list of (x, y) centroids
         
     def _load_roi_config(self) -> Dict:
-        """Загружает конфигурацию ROI из JSON"""
+        """Loads ROI configuration from JSON"""
         config_path = settings.roi_config_path
         if not os.path.exists(config_path):
             logger.warning(f"ROI config not found: {config_path}, using defaults")
@@ -31,7 +31,7 @@ class TrafficCounter:
             return json.load(f)
     
     def _default_config(self) -> Dict:
-        """Возвращает конфигурацию по умолчанию"""
+        """Returns default configuration"""
         return {
             "left_side": {
                 "name": "LEFT SIDE (TOWARD CAMERA)",
@@ -58,7 +58,7 @@ class TrafficCounter:
         }
     
     def _point_in_polygon(self, point: Tuple[float, float], polygon: List[List[int]]) -> bool:
-        """Проверяет, находится ли точка внутри полигона"""
+        """Checks if point is inside polygon"""
         x, y = point
         n = len(polygon)
         inside = False
@@ -79,7 +79,7 @@ class TrafficCounter:
     
     def _line_intersection(self, line1: Tuple[Tuple[float, float], Tuple[float, float]], 
                           line2: Tuple[Tuple[float, float], Tuple[float, float]]) -> Optional[Tuple[float, float]]:
-        """Проверяет пересечение двух отрезков"""
+        """Checks intersection of two line segments"""
         (x1, y1), (x2, y2) = line1
         (x3, y3), (x4, y4) = line2
         
@@ -97,15 +97,15 @@ class TrafficCounter:
         return None
     
     def _get_lane(self, centroid: Tuple[float, float], side: str) -> int:
-        """Определяет полосу по центроиду"""
+        """Determines lane by centroid"""
         side_config = self.roi_config[f"{side}_side"]
         for lane in side_config["lanes"]:
             if self._point_in_polygon(centroid, lane["polygon"]):
                 return lane["id"]
-        return 1  # По умолчанию
+        return 1  # Default
     
     def _crossed_counting_line(self, track_id: int, side: str) -> bool:
-        """Проверяет, пересек ли трек линию подсчета"""
+        """Checks if track crossed counting line"""
         if track_id not in self.track_history or len(self.track_history[track_id]) < 2:
             return False
         
@@ -116,7 +116,7 @@ class TrafficCounter:
         
         history = self.track_history[track_id]
         
-        # Проверяем пересечение между последними двумя точками
+        # Check intersection between last two points
         for i in range(len(history) - 1):
             p1 = history[i]
             p2 = history[i + 1]
@@ -127,13 +127,13 @@ class TrafficCounter:
             )
             
             if intersection:
-                # Проверяем направление
+                # Check direction
                 if direction == "toward_camera":
-                    # Движение к камере: y должен уменьшаться
+                    # Movement toward camera: y should decrease
                     if p2[1] < p1[1]:
                         return True
                 else:  # away_from_camera
-                    # Движение от камеры: y должен увеличиваться
+                    # Movement away from camera: y should increase
                     if p2[1] > p1[1]:
                         return True
         
@@ -142,8 +142,8 @@ class TrafficCounter:
     def process_frame(self, frame: np.ndarray, detections: List[Dict], 
                      on_event: Optional[Callable[[Dict], None]] = None) -> List[Dict]:
         """
-        Обрабатывает кадр с детекциями и создает события проезда.
-        on_event: callback(event_dict) вызывается при новом событии
+        Processes frame with detections and creates passage events.
+        on_event: callback(event_dict) called on new event
         """
         events = []
         
@@ -152,19 +152,19 @@ class TrafficCounter:
             bbox = det["bbox"]
             vehicle_type = det["class"]
             
-            # Вычисляем центроид
+            # Calculate centroid
             x1, y1, x2, y2 = bbox
             centroid = ((x1 + x2) / 2, (y1 + y2) / 2)
             
-            # Обновляем историю трека
+            # Update track history
             if track_id not in self.track_history:
                 self.track_history[track_id] = []
             self.track_history[track_id].append(centroid)
-            # Ограничиваем историю
+            # Limit history
             if len(self.track_history[track_id]) > 10:
                 self.track_history[track_id] = self.track_history[track_id][-10:]
             
-            # Определяем сторону
+            # Determine side
             side = None
             for side_name in ["left", "right"]:
                 side_config = self.roi_config[f"{side_name}_side"]
@@ -176,26 +176,26 @@ class TrafficCounter:
             if side is None:
                 continue
             
-            # Проверяем пересечение линии подсчета
+            # Check counting line intersection
             if not self.counted_tracks.get(track_id, False):
                 if self._crossed_counting_line(track_id, side):
                     self.counted_tracks[track_id] = True
                     
-                    # Определяем полосу
+                    # Determine lane
                     lane = self._get_lane(centroid, side)
                     
-                    # Классифицируем цвет
+                    # Classify color
                     color = classify_color(frame, tuple(bbox))
                     
-                    # Классифицируем марку/модель
+                    # Classify make/model
                     make_model, make_model_conf = classify_make_model(frame, tuple(bbox))
                     
-                    # Создаем snapshot для левой стороны
+                    # Create snapshot for left side
                     snapshot_path = None
                     if side == "left":
                         snapshot_path = self._save_snapshot(frame, bbox, track_id)
                     
-                    # Создаем событие
+                    # Create event
                     event = {
                         "ts": datetime.utcnow(),
                         "side": side,
@@ -211,20 +211,20 @@ class TrafficCounter:
                         "source_meta": json.dumps({"confidence": det.get("confidence", 0.0)})
                     }
                     
-                    # Сохраняем в БД
+                    # Save to database
                     self._save_event(event)
                     
                     events.append(event)
                     
-                    # Callback вызывается в main.py после process_frame
-                    # (убрали отсюда для правильной async обработки)
+                    # Callback is called in main.py after process_frame
+                    # (removed from here for proper async handling)
         
         return events
     
     def _save_snapshot(self, frame: np.ndarray, bbox: List[int], track_id: int) -> str:
-        """Сохраняет snapshot с размытием номера"""
+        """Saves snapshot with license plate blurring"""
         x1, y1, x2, y2 = bbox
-        # Добавляем небольшой отступ
+        # Add small padding
         padding = 10
         h, w = frame.shape[:2]
         x1 = max(0, x1 - padding)
@@ -234,10 +234,10 @@ class TrafficCounter:
         
         snapshot = frame[y1:y2, x1:x2].copy()
         
-        # Размываем номер
+        # Blur license plate
         snapshot = blur_plate_region(snapshot, (0, 0, x2 - x1, y2 - y1))
         
-        # Сохраняем
+        # Save
         os.makedirs(settings.snapshots_dir, exist_ok=True)
         filename = f"snapshot_{track_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
         filepath = os.path.join(settings.snapshots_dir, filename)
@@ -246,7 +246,7 @@ class TrafficCounter:
         return f"/snapshots/{filename}"
     
     def _save_event(self, event: Dict):
-        """Сохраняет событие в БД"""
+        """Saves event to database"""
         try:
             with get_session() as session:
                 db_event = TrafficEvent(**event)

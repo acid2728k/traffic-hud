@@ -12,7 +12,7 @@ class VehicleDetector:
     def __init__(self):
         self.model = YOLO(settings.yolo_model)
         self.confidence_threshold = settings.confidence_threshold
-        # Классы транспорта в COCO/YOLO: 2=car, 3=motorcycle, 5=bus, 7=truck
+        # Vehicle classes in COCO/YOLO: 2=car, 3=motorcycle, 5=bus, 7=truck
         self.vehicle_classes = [2, 3, 5, 7]
         self.class_names = {
             2: "car",
@@ -23,8 +23,8 @@ class VehicleDetector:
     
     def detect(self, frame: np.ndarray) -> List[dict]:
         """
-        Детектирует транспортные средства на кадре.
-        Возвращает список: [{"bbox": [x1,y1,x2,y2], "class": "car", "confidence": 0.9}, ...]
+        Detects vehicles in frame.
+        Returns list: [{"bbox": [x1,y1,x2,y2], "class": "car", "confidence": 0.9}, ...]
         """
         results = self.model(frame, conf=self.confidence_threshold, verbose=False)
         detections = []

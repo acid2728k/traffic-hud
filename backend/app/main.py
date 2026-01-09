@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files для snapshots
+# Static files for snapshots
 os.makedirs(settings.snapshots_dir, exist_ok=True)
 app.mount("/snapshots", StaticFiles(directory=settings.snapshots_dir), name="snapshots")
 
@@ -38,20 +38,20 @@ app.include_router(router, prefix="/api", tags=["api"])
 app.add_websocket_route("/ws/events", websocket_endpoint)
 
 
-# Глобальные объекты для обработки видео
+# Global objects for video processing
 ingest = None
 detector = None
 tracker = None
 counter = None
 processing_task = None
 
-# Глобальный буфер для последнего обработанного кадра с детекциями
+# Global buffer for the last processed frame with detections
 current_frame_with_detections = None
 current_detections = []
 
 
 async def on_new_event(event: dict):
-    """Callback при новом событии - отправляет через WebSocket"""
+    """Callback for new event - broadcasts via WebSocket"""
     try:
         await manager.broadcast({
             "type": "event_created",
@@ -63,7 +63,7 @@ async def on_new_event(event: dict):
 
 
 async def process_video_loop():
-    """Основной цикл обработки видео"""
+    """Main video processing loop"""
     global ingest, detector, tracker, counter
     
     while True:
@@ -94,38 +94,38 @@ async def process_video_loop():
                 await asyncio.sleep(2)
                 continue
             
-            # Детекция
+            # Detection
             detections = detector.detect(frame)
             if detections:
                 logger.debug(f"Detected {len(detections)} vehicles in frame")
             
-            # Трекинг
+            # Tracking
             tracked = tracker.update(detections)
             if tracked:
                 logger.debug(f"Tracking {len(tracked)} vehicles")
             
-            # Рисуем детекции на кадре для стриминга
+            # Draw detections on frame for streaming
             from app.utils.video_drawer import draw_detections, draw_counting_lines
             frame_with_detections = draw_detections(frame.copy(), tracked, show_track_id=True, show_confidence=True)
             frame_with_detections = draw_counting_lines(frame_with_detections, counter.roi_config)
             
-            # Сохраняем кадр и детекции для стриминга
+            # Save frame and detections for streaming
             global current_frame_with_detections, current_detections
             current_frame_with_detections = frame_with_detections
             current_detections = tracked
             
-            # Подсчет
-            # Создаем список событий для асинхронной обработки
+            # Counting
+            # Create list of events for async processing
             events = counter.process_frame(frame, tracked, on_event=None)
             
-            # Отправляем события через WebSocket асинхронно
+            # Send events via WebSocket asynchronously
             for event in events:
                 await on_new_event(event)
             
             if events:
                 logger.info(f"Detected {len(events)} new events")
             
-            # Контроль FPS
+            # FPS control
             await asyncio.sleep(1.0 / settings.fps)
             
         except Exception as e:
@@ -138,17 +138,17 @@ async def process_video_loop():
 
 @app.on_event("startup")
 async def startup_event():
-    """Инициализация при запуске"""
+    """Initialization on startup"""
     logger.info("Initializing database...")
     init_db()
     logger.info("Database initialized")
     
-    # Очищаем кеш локации при старте, чтобы определить локацию из YouTube
+    # Clear location cache on startup to determine location from YouTube
     from app.services.location_service import location_service
     location_service.location_cache = None
     logger.info("Location cache cleared, will be determined from YouTube on first request")
     
-    # Запускаем обработку видео в фоне
+    # Start video processing in background
     global processing_task
     processing_task = asyncio.create_task(process_video_loop())
     logger.info("Video processing task started")
@@ -156,7 +156,7 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Очистка при остановке"""
+    """Cleanup on shutdown"""
     global ingest, processing_task
     if ingest:
         ingest.release()

@@ -18,19 +18,19 @@ class VideoIngest:
         self.source_url = settings.video_source_url or settings.youtube_url
         self.source_file = settings.video_source_file
         self.fps = settings.fps
-        self.frame_skip = max(1, int(30 / self.fps))  # Пропуск кадров для производительности
+        self.frame_skip = max(1, int(30 / self.fps))  # Frame skip for performance
         
     def _get_youtube_stream_url(self, url: str) -> str:
-        """Получает прямую ссылку на HLS/manifest через yt-dlp"""
+        """Gets direct HLS/manifest URL via yt-dlp"""
         try:
             ydl_opts = {
-                'format': 'best[height<=720]/best[height<=1080]/best',  # Ограничиваем качество для производительности
+                'format': 'best[height<=720]/best[height<=1080]/best',  # Limit quality for performance
                 'quiet': True,
                 'no_warnings': True,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                # Пробуем получить HLS URL или прямую ссылку
+                # Try to get HLS URL or direct link
                 if 'url' in info:
                     return info['url']
                 elif 'requested_formats' in info and len(info['requested_formats']) > 0:
@@ -42,7 +42,7 @@ class VideoIngest:
             raise
     
     def _open_stream(self):
-        """Открывает видеопоток в зависимости от типа источника"""
+        """Opens video stream depending on source type"""
         if self.source_type == "file":
             if not self.source_file or not os.path.exists(self.source_file):
                 raise FileNotFoundError(f"Video file not found: {self.source_file}")
@@ -55,9 +55,9 @@ class VideoIngest:
             try:
                 stream_url = self._get_youtube_stream_url(self.source_url)
                 logger.info(f"Got stream URL, opening with OpenCV...")
-                # Используем OpenCV для YouTube
+                # Use OpenCV for YouTube
                 self.cap = cv2.VideoCapture(stream_url)
-                # Устанавливаем таймаут для подключения
+                # Set connection timeout
                 self.cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 10000)
                 if not self.cap.isOpened():
                     logger.error("Failed to open YouTube stream with OpenCV")
@@ -81,35 +81,35 @@ class VideoIngest:
             raise ValueError(f"Unknown source type: {self.source_type}")
     
     def read_frame(self) -> Optional[np.ndarray]:
-        """Читает следующий кадр"""
+        """Reads next frame"""
         if self.cap:
             ret, frame = self.cap.read()
             if not ret:
                 return None
-            # Пропуск кадров
+            # Frame skip
             for _ in range(self.frame_skip - 1):
                 self.cap.read()
             return frame
         return None
     
     def is_opened(self) -> bool:
-        """Проверяет, открыт ли поток"""
+        """Checks if stream is opened"""
         return self.cap is not None and self.cap.isOpened()
     
     def release(self):
-        """Освобождает ресурсы"""
+        """Releases resources"""
         if self.cap:
             self.cap.release()
             self.cap = None
     
     def get_fps(self) -> float:
-        """Возвращает FPS потока"""
+        """Returns stream FPS"""
         if self.cap:
             return self.cap.get(cv2.CAP_PROP_FPS)
         return 30.0
     
     def get_size(self) -> tuple:
-        """Возвращает размер кадра (width, height)"""
+        """Returns frame size (width, height)"""
         if self.cap:
             return (
                 int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)),

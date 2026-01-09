@@ -20,7 +20,7 @@ class ConnectionManager:
         logger.info(f"WebSocket disconnected. Total connections: {len(self.active_connections)}")
     
     async def broadcast(self, message: dict):
-        """Отправляет сообщение всем подключенным клиентам"""
+        """Sends message to all connected clients"""
         disconnected = set()
         for connection in self.active_connections:
             try:
@@ -29,7 +29,7 @@ class ConnectionManager:
                 logger.error(f"Error sending WebSocket message: {e}")
                 disconnected.add(connection)
         
-        # Удаляем отключенные соединения
+        # Remove disconnected connections
         for conn in disconnected:
             self.active_connections.discard(conn)
 
@@ -41,9 +41,9 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Ждем сообщения от клиента (ping/pong)
+            # Wait for message from client (ping/pong)
             data = await websocket.receive_text()
-            # Можно обработать ping/pong если нужно
+            # Can handle ping/pong if needed
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 

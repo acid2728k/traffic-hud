@@ -7,7 +7,7 @@ import styles from './StatusBar.module.css'
 interface StatusBarProps {
   status: 'live' | 'error' | 'loading'
   onRetry?: () => void
-  location?: string // Оставлено для совместимости, но не используется
+  location?: string // Kept for compatibility, but not used
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({ status, onRetry }) => {

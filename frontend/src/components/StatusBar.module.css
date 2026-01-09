@@ -33,11 +33,11 @@
 }
 
 .centerSection {
-  flex: 3; /* Увеличено в 3 раза (было flex: 1) */
+  flex: 3; /* Increased 3 times (was flex: 1) */
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 0; /* Позволяет shrink для ticker */
+  min-width: 0; /* Allows shrink for ticker */
   margin: 0 1rem;
 }
 

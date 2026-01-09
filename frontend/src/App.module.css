@@ -8,8 +8,8 @@
 .videoContainer {
   position: fixed;
   top: 0;
-  left: 280px; /* Начинается после левой панели */
-  width: calc(100vw - 560px); /* Ширина минус две панели по 280px */
+  left: 280px; /* Starts after left panel */
+  width: calc(100vw - 560px); /* Width minus two panels of 280px each */
   height: 100vh;
   z-index: 0;
   background: #000;
@@ -44,7 +44,7 @@
   pointer-events: auto;
 }
 
-/* Черный фон под левой панелью */
+/* Black background under left panel */
 .overlay::before {
   content: '';
   position: absolute;
@@ -56,7 +56,7 @@
   z-index: 0;
 }
 
-/* Черный фон под правой панелью */
+/* Black background under right panel */
 .overlay::after {
   content: '';
   position: absolute;
@@ -69,7 +69,7 @@
 }
 
 
-/* Сетка и сканлайны */
+/* Grid and scanlines */
 .gridOverlay {
   position: absolute;
   top: 0;
@@ -127,7 +127,7 @@
 }
 
 .centerSpace {
-  /* Пустое пространство для видео - видео видно только здесь */
+  /* Empty space for video - video is visible only here */
   position: relative;
   overflow: hidden;
   background: transparent;

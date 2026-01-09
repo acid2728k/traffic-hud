@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 class SimpleTracker:
     """
-    Упрощенный трекер на основе IoU (Intersection over Union).
-    Для MVP этого достаточно. Можно заменить на ByteTrack/DeepSORT позже.
+    Simplified tracker based on IoU (Intersection over Union).
+    Sufficient for MVP. Can be replaced with ByteTrack/DeepSORT later.
     """
     def __init__(self, max_disappeared: int = 5, iou_threshold: float = 0.3):
         self.next_id = 1
@@ -19,11 +19,11 @@ class SimpleTracker:
         self.frame_count = 0
     
     def _iou(self, box1: List[int], box2: List[int]) -> float:
-        """Вычисляет IoU между двумя bbox"""
+        """Calculates IoU between two bboxes"""
         x1_1, y1_1, x2_1, y2_1 = box1
         x1_2, y1_2, x2_2, y2_2 = box2
         
-        # Пересечение
+        # Intersection
         x1_i = max(x1_1, x1_2)
         y1_i = max(y1_1, y1_2)
         x2_i = min(x2_1, x2_2)
@@ -43,18 +43,18 @@ class SimpleTracker:
         return inter_area / union_area
     
     def _centroid(self, bbox: List[int]) -> tuple:
-        """Вычисляет центр bbox"""
+        """Calculates bbox center"""
         x1, y1, x2, y2 = bbox
         return ((x1 + x2) / 2, (y1 + y2) / 2)
     
     def update(self, detections: List[Dict]) -> List[Dict]:
         """
-        Обновляет треки на основе новых детекций.
-        Возвращает детекции с добавленным track_id.
+        Updates tracks based on new detections.
+        Returns detections with added track_id.
         """
         self.frame_count += 1
         
-        # Удаляем старые треки
+        # Remove old tracks
         tracks_to_remove = []
         for track_id, track in self.tracks.items():
             if self.frame_count - track["last_seen_frame"] > self.max_disappeared:
@@ -62,11 +62,11 @@ class SimpleTracker:
         for track_id in tracks_to_remove:
             del self.tracks[track_id]
         
-        # Если нет детекций, возвращаем пустой список
+        # If no detections, return empty list
         if not detections:
             return []
         
-        # Матрица IoU между существующими треками и новыми детекциями
+        # IoU matrix between existing tracks and new detections
         matched = set()
         updated_detections = []
         
@@ -84,7 +84,7 @@ class SimpleTracker:
                     best_track_id = track_id
             
             if best_track_id is not None:
-                # Обновляем существующий трек
+                # Update existing track
                 detection["track_id"] = best_track_id
                 self.tracks[best_track_id] = {
                     "bbox": bbox,
@@ -93,7 +93,7 @@ class SimpleTracker:
                 }
                 matched.add(best_track_id)
             else:
-                # Создаем новый трек
+                # Create new track
                 track_id = self.next_id
                 self.next_id += 1
                 detection["track_id"] = track_id

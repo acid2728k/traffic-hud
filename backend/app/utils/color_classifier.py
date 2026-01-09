@@ -5,8 +5,8 @@ from typing import Tuple
 
 def classify_color(frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> str:
     """
-    Классифицирует цвет автомобиля по ROI bbox.
-    Возвращает: black, white, gray, red, blue, green, yellow, orange, brown, silver
+    Classifies vehicle color by ROI bbox.
+    Returns: black, white, gray, red, blue, green, yellow, orange, brown, silver
     """
     x1, y1, x2, y2 = bbox
     roi = frame[y1:y2, x1:x2]
@@ -14,15 +14,15 @@ def classify_color(frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> str:
     if roi.size == 0:
         return "unknown"
     
-    # Конвертируем в HSV
+    # Convert to HSV
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     
-    # Вычисляем средний цвет
+    # Calculate mean color
     mean_hue = np.mean(hsv[:, :, 0])
     mean_sat = np.mean(hsv[:, :, 1])
     mean_val = np.mean(hsv[:, :, 2])
     
-    # Классификация
+    # Classification
     if mean_val < 30:
         return "black"
     if mean_sat < 30 and mean_val > 200:
@@ -32,7 +32,7 @@ def classify_color(frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> str:
     if mean_sat < 30 and mean_val > 200:
         return "silver"
     
-    # Цветные
+    # Colored
     if mean_hue < 10 or mean_hue > 170:
         return "red"
     if 20 < mean_hue < 30:

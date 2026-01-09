@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     yolo_model: str = "yolov8n.pt"
     confidence_threshold: float = 0.25
     
-    # Stream location (можно переопределить через .env)
+    # Stream location (can be overridden via .env)
     stream_location: str = "New York, USA"
     stream_timezone: str = "America/New_York"
     

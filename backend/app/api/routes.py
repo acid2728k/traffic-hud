@@ -19,11 +19,11 @@ router = APIRouter()
 
 @router.get("/stats")
 async def get_stats():
-    """Возвращает статистику за последний час"""
+    """Returns statistics for the last hour"""
     one_hour_ago = datetime.utcnow() - timedelta(hours=1)
     
     with get_session() as session:
-        # Левая сторона
+        # Left side
         left_count = session.exec(
             select(TrafficEvent).where(
                 TrafficEvent.side == "left",
@@ -31,7 +31,7 @@ async def get_stats():
             )
         ).all()
         
-        # Правая сторона
+        # Right side
         right_count = session.exec(
             select(TrafficEvent).where(
                 TrafficEvent.side == "right",
@@ -50,7 +50,7 @@ async def get_events(
     side: Optional[str] = Query(None, description="left or right"),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Возвращает список событий"""
+    """Returns list of events"""
     with get_session() as session:
         query = select(TrafficEvent).order_by(TrafficEvent.ts.desc())
         
@@ -82,7 +82,7 @@ async def get_events(
 
 @router.get("/events/{event_id}")
 async def get_event(event_id: int):
-    """Возвращает детали события"""
+    """Returns event details"""
     with get_session() as session:
         event = session.get(TrafficEvent, event_id)
         if not event:
@@ -107,7 +107,7 @@ async def get_event(event_id: int):
 
 @router.get("/snapshots/{filename}")
 async def get_snapshot(filename: str):
-    """Возвращает snapshot файл"""
+    """Returns snapshot file"""
     filepath = os.path.join(settings.snapshots_dir, filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Snapshot not found")
@@ -116,8 +116,8 @@ async def get_snapshot(filename: str):
 
 @router.get("/stream-info")
 async def get_stream_info(force_refresh: bool = Query(False, description="Force refresh location from YouTube")):
-    """Возвращает информацию о локации трансляции"""
-    # Если кеш пустой, принудительно обновляем
+    """Returns stream location information"""
+    # If cache is empty, force refresh
     if not location_service.location_cache:
         force_refresh = True
     location_info = location_service.get_location(force_refresh=force_refresh)
@@ -127,19 +127,19 @@ async def get_stream_info(force_refresh: bool = Query(False, description="Force 
 
 @router.get("/weather")
 async def get_weather():
-    """Возвращает погоду для локации трансляции"""
+    """Returns weather for stream location"""
     location_info = location_service.get_location()
     location = location_info.get('location', 'Unknown Location')
     
-    # В MVP используем заглушку, позже можно подключить реальный API (OpenWeatherMap и т.д.)
-    # Для реального API нужен ключ, который можно добавить в .env
+    # In MVP we use mock data, later can connect real API (OpenWeatherMap etc.)
+    # For real API, add API key to .env
     import random
     conditions = ['Clear', 'Cloudy', 'Rain', 'Snow', 'Fog']
     
-    # Генерируем реалистичные данные на основе локации (для демо)
-    # В продакшене здесь будет запрос к OpenWeatherMap API
+    # Generate realistic data based on location (for demo)
+    # In production, this will be a request to OpenWeatherMap API
     return {
-        "temperature": random.randint(-5, 25),  # Диапазон зависит от локации
+        "temperature": random.randint(-5, 25),  # Range depends on location
         "condition": random.choice(conditions),
         "humidity": random.randint(40, 90),
         "windSpeed": random.randint(5, 25),
@@ -149,27 +149,27 @@ async def get_weather():
 
 @router.get("/news")
 async def get_news():
-    """Возвращает новости для локации трансляции"""
+    """Returns news for stream location"""
     location_info = location_service.get_location()
     location = location_info.get('location', 'Unknown Location')
     
-    # Извлекаем название города (например, "Ocean City, MD, USA" -> "Ocean City")
+    # Extract city name (e.g., "Ocean City, MD, USA" -> "Ocean City")
     city = location.split(',')[0].strip()
     
     try:
-        # Используем Google News RSS для получения новостей по городу
+        # Use Google News RSS to get news for the city
         import feedparser
         import urllib.parse
         
-        # Формируем запрос для Google News RSS
+        # Build query for Google News RSS
         query = urllib.parse.quote(f"{city} news")
         rss_url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
         
-        # Парсим RSS
+        # Parse RSS
         feed = feedparser.parse(rss_url)
         
         news_items = []
-        for entry in feed.entries[:10]:  # Берем первые 10 новостей
+        for entry in feed.entries[:10]:  # Take first 10 news items
             title = entry.get('title', '').strip()
             if title:
                 news_items.append(title)
@@ -180,7 +180,7 @@ async def get_news():
                 "location": city
             }
         
-        # Fallback: если RSS не работает, возвращаем заглушку
+        # Fallback: if RSS doesn't work, return mock data
         return {
             "news": [
                 f"Local news updates for {city}",
@@ -193,7 +193,7 @@ async def get_news():
         
     except Exception as e:
         logger.error(f"Error fetching news: {e}")
-        # Fallback на заглушку при ошибке
+        # Fallback to mock data on error
         return {
             "news": [
                 f"News feed loading for {city}",
@@ -207,21 +207,21 @@ async def get_news():
 @router.get("/video-stream")
 async def video_stream():
     """
-    MJPEG stream обработанного видео с детекциями.
-    Используется для отображения видео с bounding boxes в браузере.
+    Returns a single frame of processed video with detections (JPEG).
+    Frontend updates this endpoint every 100ms to create video effect.
     """
     from app.main import current_frame_with_detections
     
     try:
         frame = current_frame_with_detections
         if frame is not None and frame.size > 0:
-            # Кодируем кадр в JPEG
+            # Encode frame to JPEG
             ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             if ret:
                 frame_bytes = buffer.tobytes()
                 return Response(content=frame_bytes, media_type="image/jpeg")
         
-        # Если кадра нет, отправляем черный кадр с текстом
+        # If no frame, send black frame with text
         black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(black_frame, "Waiting for video...", (150, 240), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -231,7 +231,7 @@ async def video_stream():
             return Response(content=frame_bytes, media_type="image/jpeg")
     except Exception as e:
         logger.error(f"Error generating frame: {e}")
-        # Отправляем ошибку как изображение
+        # Send error as image
         error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(error_frame, f"Error: {str(e)[:30]}", (50, 240), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
@@ -249,7 +249,7 @@ async def video_stream():
 @router.get("/detections")
 async def get_current_detections():
     """
-    Возвращает текущие детекции для отображения в UI.
+    Returns current detections for display in UI.
     """
     from app.main import current_detections
     

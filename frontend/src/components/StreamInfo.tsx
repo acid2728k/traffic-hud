@@ -9,7 +9,7 @@ export const StreamInfo: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<string>('')
 
   useEffect(() => {
-    // Загружаем информацию о локации с сервера
+    // Load location information from server
     const loadStreamInfo = () => {
       api.getStreamInfo()
         .then(info => {
@@ -24,7 +24,7 @@ export const StreamInfo: React.FC = () => {
     }
     
     loadStreamInfo()
-    // Обновляем каждые 30 секунд на случай если YouTube метаданные обновились
+    // Update every 30 seconds in case YouTube metadata was updated
     const interval = setInterval(loadStreamInfo, 30000)
     return () => clearInterval(interval)
   }, [])

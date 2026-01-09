@@ -3,8 +3,8 @@ import { TrafficEvent, Stats } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
-// Настройка таймаутов для axios
-axios.defaults.timeout = 10000 // 10 секунд
+// Configure timeouts for axios
+axios.defaults.timeout = 10000 // 10 seconds
 axios.defaults.headers.common['Content-Type'] = 'application/json'
 
 export const api = {

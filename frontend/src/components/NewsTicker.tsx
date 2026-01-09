@@ -3,7 +3,7 @@ import { api } from '../services/api'
 import styles from './NewsTicker.module.css'
 
 interface NewsTickerProps {
-  location?: string // Оставлено для совместимости, но не используется (backend сам определяет локацию)
+  location?: string // Kept for compatibility, but not used (backend determines location itself)
 }
 
 export const NewsTicker: React.FC<NewsTickerProps> = () => {
@@ -21,10 +21,10 @@ export const NewsTicker: React.FC<NewsTickerProps> = () => {
     }
 
     fetchNews()
-    // Обновляем каждые 10 минут
+    // Update every 10 minutes
     const interval = setInterval(fetchNews, 10 * 60 * 1000)
     return () => clearInterval(interval)
-  }, []) // Убрали location из зависимостей, так как backend сам определяет локацию
+  }, []) // Removed location from dependencies, as backend determines location itself
 
   if (news.length === 0) {
     return null

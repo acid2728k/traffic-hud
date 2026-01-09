@@ -12,8 +12,8 @@ class LocationService:
     
     def get_location_from_youtube(self, url: str) -> Optional[Dict]:
         """
-        Пытается получить информацию о локации из YouTube метаданных.
-        Возвращает: {location: str, timezone: str} или None
+        Attempts to get location information from YouTube metadata.
+        Returns: {location: str, timezone: str} or None
         """
         try:
             ydl_opts = {
@@ -22,28 +22,27 @@ class LocationService:
                 'extract_flat': False,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Устанавливаем таймаут для запроса
                 info = ydl.extract_info(url, download=False)
                 
-                # Пытаемся получить локацию из разных полей
+                # Try to get location from different fields
                 location = None
                 timezone = None
                 
-                # Из описания или названия
+                # From description or title
                 title = info.get('title', '')
                 description = info.get('description', '')
                 uploader = info.get('uploader', '')
                 
                 logger.info(f"Analyzing YouTube video: title='{title[:100]}'")
                 
-                # Простой парсинг - ищем упоминания городов
-                # Приоритет: более специфичные ключевые слова первыми
+                # Simple parsing - search for city mentions
+                # Priority: more specific keywords first
                 location_keywords = [
-                    # Ocean City (приоритет - более специфичные первыми)
+                    # Ocean City (priority - more specific first)
                     ('ocean city md', 'Ocean City, MD, USA', 'America/New_York'),
                     ('ocean city, md', 'Ocean City, MD, USA', 'America/New_York'),
                     ('ocean city', 'Ocean City, MD, USA', 'America/New_York'),
-                    # Другие города
+                    # Other cities
                     ('moscow', 'Moscow, Russia', 'Europe/Moscow'),
                     ('москва', 'Moscow, Russia', 'Europe/Moscow'),
                     ('spb', 'Saint Petersburg, Russia', 'Europe/Moscow'),
@@ -61,9 +60,9 @@ class LocationService:
                 text_to_search = f"{title} {description} {uploader}".lower()
                 logger.info(f"Searching for location in text (first 300 chars): {text_to_search[:300]}")
                 
-                # Улучшенный поиск: сначала ищем более специфичные совпадения
+                # Improved search: first look for more specific matches
                 for keyword, loc, tz in location_keywords:
-                    # Проверяем точное вхождение ключевого слова
+                    # Check exact keyword match
                     if keyword in text_to_search:
                         location = loc
                         timezone = tz
@@ -71,13 +70,13 @@ class LocationService:
                         logger.info(f"  Full title: {title}")
                         break
                 
-                # Если не нашли, пробуем более гибкий поиск для Ocean City
+                # If not found, try flexible search for Ocean City
                 if not location and ('ocean' in text_to_search and 'city' in text_to_search):
-                    # Проверяем, есть ли "md" или "maryland" рядом
+                    # Check if "md" or "maryland" is nearby
                     ocean_idx = text_to_search.find('ocean')
                     city_idx = text_to_search.find('city', ocean_idx)
-                    if city_idx > ocean_idx and city_idx < ocean_idx + 20:  # "ocean" и "city" близко друг к другу
-                        # Проверяем наличие "md" или "maryland" в тексте
+                    if city_idx > ocean_idx and city_idx < ocean_idx + 20:  # "ocean" and "city" are close to each other
+                        # Check for "md" or "maryland" in text
                         if ' md' in text_to_search or 'maryland' in text_to_search:
                             location = 'Ocean City, MD, USA'
                             timezone = 'America/New_York'
@@ -97,15 +96,15 @@ class LocationService:
     
     def get_location(self, force_refresh: bool = False) -> Dict:
         """
-        Получает информацию о локации трансляции.
-        Сначала пытается из YouTube, затем из конфига, затем дефолт.
+        Gets stream location information.
+        First tries from YouTube, then from config, then default.
         """
-        # Если не требуется обновление и есть кеш - возвращаем его
+        # If no refresh required and cache exists - return it
         if not force_refresh and self.location_cache:
             logger.debug(f"Returning cached location: {self.location_cache}")
             return self.location_cache
         
-        # Пытаемся получить из YouTube
+        # Try to get from YouTube
         if settings.video_source_type == 'youtube_url' and settings.youtube_url:
             try:
                 logger.info(f"🔍 Attempting to get location from YouTube: {settings.youtube_url}")
@@ -117,20 +116,20 @@ class LocationService:
                 else:
                     logger.warning("⚠️ Could not determine location from YouTube metadata")
             except Exception as e:
-                # Не критичная ошибка - просто логируем и продолжаем с дефолтными значениями
+                # Not critical error - just log and continue with default values
                 logger.warning(f"⚠️ Failed to get location from YouTube (will use default): {str(e)[:100]}")
-                # Не логируем полный traceback для таймаутов - это нормально
+                # Don't log full traceback for timeouts - this is normal
         
-        # Используем настройки из конфига или дефолт
+        # Use settings from config or default
         location = getattr(settings, 'stream_location', None)
         timezone = getattr(settings, 'stream_timezone', None)
         
         if not location:
-            # Если не указано в конфиге, используем дефолт
+            # If not specified in config, use default
             location = 'New York, USA'
             timezone = 'America/New_York'
         elif not timezone:
-            # Если есть location но нет timezone, пытаемся определить
+            # If location exists but no timezone, try to determine
             timezone = 'UTC'
         
         result = {

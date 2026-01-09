@@ -16,11 +16,11 @@ function App() {
   const videoImgRef = useRef<HTMLImageElement>(null)
   const [videoError, setVideoError] = useState(false)
 
-  // Обновление видео стрима - вынесено на верхний уровень
+  // Video stream update - moved to top level
   const updateVideoStream = useCallback(() => {
     const img = videoImgRef.current
     if (img && !videoError) {
-      // Добавляем timestamp для обхода кеша
+      // Add timestamp to bypass cache
       img.src = `/api/video-stream?t=${Date.now()}`
     }
   }, [videoError])
@@ -46,11 +46,11 @@ function App() {
   useEffect(() => {
     loadData()
     
-    // Загружаем информацию о локации
+    // Load location information
     const loadStreamInfo = async () => {
       try {
         const info = await api.getStreamInfo()
-        // Извлекаем название города из локации (например, "Ocean City, MD, USA" -> "Ocean City")
+        // Extract city name from location (e.g., "Ocean City, MD, USA" -> "Ocean City")
         const city = info.location.split(',')[0].trim()
         setStreamInfo({
           location: info.location,
@@ -68,17 +68,17 @@ function App() {
     }
     
     loadStreamInfo()
-    // Обновляем локацию каждые 30 секунд
+    // Update location every 30 seconds
     const streamInfoInterval = setInterval(loadStreamInfo, 30000)
 
-    // Polling fallback каждые 5 секунд
+    // Polling fallback every 5 seconds
     const pollingInterval = setInterval(() => {
       if (status === 'error' || status === 'loading') {
         loadData()
       }
     }, 5000)
 
-    // WebSocket подключение
+    // WebSocket connection
     wsService.connect()
     const unsubscribe = wsService.subscribe((message) => {
       if (message.type === 'event_created') {
@@ -94,16 +94,16 @@ function App() {
             return updated
           })
         }
-        // Обновляем статистику
+        // Update statistics
         api.getStats().then(setStats).catch(console.error)
       }
     })
 
-    // Обновляем кадр каждые 100ms (~10 FPS) только если нет ошибки
+    // Update frame every 100ms (~10 FPS) only if no error
     let videoInterval: NodeJS.Timeout | null = null
     if (!videoError) {
       videoInterval = setInterval(updateVideoStream, 100)
-      // Первая загрузка
+      // First load
       updateVideoStream()
     }
 
