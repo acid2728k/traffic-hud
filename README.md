@@ -71,13 +71,15 @@ YOUTUBE_URL=https://www.youtube.com/watch?v=H0Z6faxNLCI
 VIDEO_SOURCE_TYPE=hls_url
 VIDEO_SOURCE_URL=https://example.com/stream.m3u8
 
-# Вариант 4: RTSP поток
+# Вариант 4: RTSP поток (IP-камера)
 VIDEO_SOURCE_TYPE=rtsp_url
 VIDEO_SOURCE_URL=rtsp://example.com/stream
 
 # Настройки обработки
 FPS=10
 ```
+
+📹 **Detailed IP Camera Setup Guide: [IP_CAMERA_SETUP.md](./IP_CAMERA_SETUP.md)**
 
 4. Запустите через Docker Compose:
 ```bash
@@ -250,6 +252,7 @@ SQLite база данных `traffic_events.db` содержит таблицу
 - Проверьте путь к файлу в `.env`
 - Для YouTube: убедитесь, что URL доступен
 - Для RTSP/HLS: проверьте доступность потока
+- For IP cameras: see [IP_CAMERA_SETUP.md](./IP_CAMERA_SETUP.md) for detailed setup guide and troubleshooting
 
 ### Проблема: Нет детекций
 

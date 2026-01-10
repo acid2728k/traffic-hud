@@ -170,31 +170,33 @@ class TrafficCounter:
             if len(self.track_history[track_id]) > 10:
                 self.track_history[track_id] = self.track_history[track_id][-10:]
             
-            # Determine side based primarily on X position (left vs right half of screen)
+            # Determine side based on ROI membership (more reliable than X position)
             frame_width = frame.shape[1] if len(frame.shape) > 1 else 1920
             
-            # Simple rule: left half = left side, right half = right side
-            side = "left" if centroid[0] < frame_width / 2 else "right"
+            # Check which ROI the centroid is in
+            left_roi_polygon = self.roi_config["left_side"]["roi"]["polygon"]
+            right_roi_polygon = self.roi_config["right_side"]["roi"]["polygon"]
+            
+            in_left_roi = self._point_in_polygon(centroid, left_roi_polygon)
+            in_right_roi = self._point_in_polygon(centroid, right_roi_polygon)
+            
+            # Determine side based on ROI membership
+            if in_left_roi and not in_right_roi:
+                side = "left"
+            elif in_right_roi and not in_left_roi:
+                side = "right"
+            elif in_left_roi and in_right_roi:
+                # If in both ROIs (overlap), use X position as tiebreaker
+                side = "left" if centroid[0] < frame_width / 2 else "right"
+                logger.debug(f"Track {track_id}: In both ROIs, using X position: {side}")
+            else:
+                # If not in any ROI, use X position as fallback
+                side = "left" if centroid[0] < frame_width / 2 else "right"
+                logger.debug(f"Track {track_id}: Not in any ROI, using X position: {side}")
             
             # Log for debugging (only for first few tracks to avoid spam)
             if track_id <= 5 or track_id % 50 == 0:
-                logger.info(f"Track {track_id}: centroid=({centroid[0]:.1f}, {centroid[1]:.1f}), frame_width={frame_width}, assigned_side={side}")
-            
-            # Optional: Validate with ROI if centroid is outside expected ROI
-            # This helps catch edge cases but doesn't override the main rule
-            side_config = self.roi_config[f"{side}_side"]
-            roi_polygon = side_config["roi"]["polygon"]
-            in_expected_roi = self._point_in_polygon(centroid, roi_polygon)
-            
-            if not in_expected_roi:
-                # Check if centroid is in the other side's ROI
-                other_side = "right" if side == "left" else "left"
-                other_side_config = self.roi_config[f"{other_side}_side"]
-                other_roi_polygon = other_side_config["roi"]["polygon"]
-                if self._point_in_polygon(centroid, other_roi_polygon):
-                    # Centroid is in other side's ROI - switch sides
-                    side = other_side
-                    logger.info(f"Track {track_id}: Switched to {side} (centroid in {other_side} ROI but X position suggested {('right' if side == 'left' else 'left')})")
+                logger.info(f"Track {track_id}: centroid=({centroid[0]:.1f}, {centroid[1]:.1f}), frame_width={frame_width}, in_left_roi={in_left_roi}, in_right_roi={in_right_roi}, assigned_side={side}")
             
             if side is None:
                 continue
@@ -214,9 +216,9 @@ class TrafficCounter:
                     max_area_updated = True
             
             # Check if vehicle should be counted
-            # Only count if not already counted, or if counted on different side (shouldn't happen, but safety check)
+            # Only count if not already counted on this side
             already_counted_side = self.counted_tracks.get(track_id)
-            if already_counted_side is None or already_counted_side != side:
+            if already_counted_side != side:  # Allow counting if not counted or counted on different side
                 side_config = self.roi_config[f"{side}_side"]
                 
                 # Check if vehicle is in ROI
@@ -224,15 +226,12 @@ class TrafficCounter:
                 
                 if in_roi:
                     # Count immediately when vehicle is detected in ROI
-                    # This creates events as soon as vehicles are detected and tracked by machine vision
-                    # We require at least 2 points in history to ensure it's a real track (not a false detection)
+                    # Create event as soon as vehicle is detected in ROI (no history requirement)
                     history_len = len(self.track_history.get(track_id, []))
                     
-                    # Create event immediately when vehicle is in ROI and has been tracked for at least 2 frames
-                    # This ensures we catch vehicles as soon as they're detected, not waiting for line crossing
-                    should_count = history_len >= 2
-                    
-                    if should_count:
+                    # Mark as counted immediately when in ROI
+                    # This ensures we catch all vehicles as soon as they enter ROI
+                    if track_id not in self.counted_tracks or self.counted_tracks[track_id] != side:
                         self.counted_tracks[track_id] = side
                         logger.info(f"Track {track_id} counted on {side} side immediately after detection (centroid=({centroid[0]:.1f}, {centroid[1]:.1f}), in_roi={in_roi}, history_len={history_len})")
                     
@@ -277,28 +276,31 @@ class TrafficCounter:
                             if plate_number:
                                 logger.info(f"Plate number for track {track_id}: {plate_number}")
                     
-                    # Create event
-                    event = {
-                        "ts": datetime.utcnow(),
-                        "side": side,
-                        "lane": lane,
-                        "direction": self.roi_config[f"{side}_side"]["direction"],
-                        "vehicle_type": vehicle_type,
-                        "color": color,
-                        "make_model": make_model or "Vehicle",
-                        "make_model_conf": make_model_conf,
-                        "snapshot_path": snapshot_path,
-                        "plate_number": plate_number or "XXXXX",
-                        "plate_snapshot_path": plate_snapshot_path,
-                        "bbox": json.dumps(bbox),
-                        "track_id": track_id,
-                        "source_meta": json.dumps({"confidence": det.get("confidence", 0.0)})
-                    }
-                    
-                    # Save to database
-                    self._save_event(event)
-                    
-                    events.append(event)
+                    # Create event - only create if we just marked this track as counted
+                    # This ensures we create exactly one event per track per side
+                    if track_id in self.counted_tracks and self.counted_tracks[track_id] == side:
+                        event = {
+                            "ts": datetime.utcnow(),
+                            "side": side,
+                            "lane": lane,
+                            "direction": self.roi_config[f"{side}_side"]["direction"],
+                            "vehicle_type": vehicle_type,
+                            "color": color,
+                            "make_model": make_model or "Vehicle",
+                            "make_model_conf": make_model_conf,
+                            "snapshot_path": snapshot_path,
+                            "plate_number": plate_number or "XXXXX",
+                            "plate_snapshot_path": plate_snapshot_path,
+                            "bbox": json.dumps(bbox),
+                            "track_id": track_id,
+                            "source_meta": json.dumps({"confidence": det.get("confidence", 0.0)})
+                        }
+                        
+                        # Save to database
+                        self._save_event(event)
+                        
+                        events.append(event)
+                        logger.info(f"Event created for track {track_id} on {side} side")
                     
                     # Callback is called in main.py after process_frame
                     # (removed from here for proper async handling)
@@ -330,7 +332,7 @@ class TrafficCounter:
         snapshot_path = f"/snapshots/{filename}"
         
         # Extract and save plate region (always save, even if recognition fails)
-        plate_number = None
+        plate_number = "XXXXX"
         plate_snapshot_path = None
         
         try:
@@ -339,8 +341,17 @@ class TrafficCounter:
                 # Always save plate snapshot
                 plate_filename = f"plate_{track_id}_{timestamp}.jpg"
                 plate_filepath = os.path.join(settings.snapshots_dir, plate_filename)
-                cv2.imwrite(plate_filepath, plate_roi)
-                plate_snapshot_path = f"/snapshots/{plate_filename}"
+                
+                # Ensure directory exists
+                os.makedirs(settings.snapshots_dir, exist_ok=True)
+                
+                # Save plate image
+                success = cv2.imwrite(plate_filepath, plate_roi)
+                if success:
+                    plate_snapshot_path = f"/snapshots/{plate_filename}"
+                    logger.debug(f"Plate snapshot saved for track {track_id}: {plate_snapshot_path}")
+                else:
+                    logger.warning(f"Failed to save plate snapshot for track {track_id}")
                 
                 # Try to recognize plate number
                 plate_number = recognize_plate_number(plate_roi)
@@ -350,10 +361,11 @@ class TrafficCounter:
                     plate_number = "XXXXX"
                     logger.debug(f"Could not recognize plate number for track {track_id}")
             else:
-                # If plate region not found, set default
+                # If plate region not found, log warning but still set default
+                logger.warning(f"Plate region not found for track {track_id}, bbox={bbox}")
                 plate_number = "XXXXX"
         except Exception as e:
-            logger.warning(f"Error processing plate for track {track_id}: {e}")
+            logger.error(f"Error processing plate for track {track_id}: {e}", exc_info=True)
             plate_number = "XXXXX"
         
         return snapshot_path, plate_number, plate_snapshot_path
