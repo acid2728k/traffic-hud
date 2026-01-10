@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class TrafficCounter:
     def __init__(self):
         self.roi_config = self._load_roi_config()
-        self.counted_tracks: Dict[int, bool] = {}  # track_id -> already counted
+        self.counted_tracks: Dict[int, str] = {}  # track_id -> side where it was counted ("left" or "right")
         self.track_history: Dict[int, List[Tuple[float, float]]] = {}  # track_id -> list of (x, y) centroids
         
     def _load_roi_config(self) -> Dict:
@@ -116,7 +116,7 @@ class TrafficCounter:
         
         history = self.track_history[track_id]
         
-        # Check intersection between last two points
+        # Check intersection between consecutive points
         for i in range(len(history) - 1):
             p1 = history[i]
             p2 = history[i + 1]
@@ -128,13 +128,16 @@ class TrafficCounter:
             
             if intersection:
                 # Check direction
+                dy = p2[1] - p1[1]
                 if direction == "toward_camera":
-                    # Movement toward camera: y should decrease
-                    if p2[1] < p1[1]:
+                    # Movement toward camera: y should decrease (moving up)
+                    if dy < 0:
+                        logger.debug(f"Track {track_id} crossed {side} counting line (toward_camera, dy={dy:.1f})")
                         return True
                 else:  # away_from_camera
-                    # Movement away from camera: y should increase
-                    if p2[1] > p1[1]:
+                    # Movement away from camera: y should increase (moving down)
+                    if dy > 0:
+                        logger.debug(f"Track {track_id} crossed {side} counting line (away_from_camera, dy={dy:.1f})")
                         return True
         
         return False
@@ -164,22 +167,57 @@ class TrafficCounter:
             if len(self.track_history[track_id]) > 10:
                 self.track_history[track_id] = self.track_history[track_id][-10:]
             
-            # Determine side
-            side = None
-            for side_name in ["left", "right"]:
-                side_config = self.roi_config[f"{side_name}_side"]
-                roi_polygon = side_config["roi"]["polygon"]
-                if self._point_in_polygon(centroid, roi_polygon):
-                    side = side_name
-                    break
+            # Determine side based primarily on X position (left vs right half of screen)
+            frame_width = frame.shape[1] if len(frame.shape) > 1 else 1920
+            
+            # Simple rule: left half = left side, right half = right side
+            side = "left" if centroid[0] < frame_width / 2 else "right"
+            
+            # Log for debugging (only for first few tracks to avoid spam)
+            if track_id <= 5 or track_id % 50 == 0:
+                logger.info(f"Track {track_id}: centroid=({centroid[0]:.1f}, {centroid[1]:.1f}), frame_width={frame_width}, assigned_side={side}")
+            
+            # Optional: Validate with ROI if centroid is outside expected ROI
+            # This helps catch edge cases but doesn't override the main rule
+            side_config = self.roi_config[f"{side}_side"]
+            roi_polygon = side_config["roi"]["polygon"]
+            in_expected_roi = self._point_in_polygon(centroid, roi_polygon)
+            
+            if not in_expected_roi:
+                # Check if centroid is in the other side's ROI
+                other_side = "right" if side == "left" else "left"
+                other_side_config = self.roi_config[f"{other_side}_side"]
+                other_roi_polygon = other_side_config["roi"]["polygon"]
+                if self._point_in_polygon(centroid, other_roi_polygon):
+                    # Centroid is in other side's ROI - switch sides
+                    side = other_side
+                    logger.info(f"Track {track_id}: Switched to {side} (centroid in {other_side} ROI but X position suggested {('right' if side == 'left' else 'left')})")
             
             if side is None:
                 continue
             
-            # Check counting line intersection
-            if not self.counted_tracks.get(track_id, False):
-                if self._crossed_counting_line(track_id, side):
-                    self.counted_tracks[track_id] = True
+            # Check if vehicle should be counted
+            # Only count if not already counted, or if counted on different side (shouldn't happen, but safety check)
+            already_counted_side = self.counted_tracks.get(track_id)
+            if already_counted_side is None or already_counted_side != side:
+                side_config = self.roi_config[f"{side}_side"]
+                
+                # Check if vehicle is in ROI
+                in_roi = self._point_in_polygon(centroid, side_config["roi"]["polygon"])
+                
+                if in_roi:
+                    # Count immediately when vehicle is detected in ROI
+                    # This creates events as soon as vehicles are detected and tracked by machine vision
+                    # We require at least 2 points in history to ensure it's a real track (not a false detection)
+                    history_len = len(self.track_history.get(track_id, []))
+                    
+                    # Create event immediately when vehicle is in ROI and has been tracked for at least 2 frames
+                    # This ensures we catch vehicles as soon as they're detected, not waiting for line crossing
+                    should_count = history_len >= 2
+                    
+                    if should_count:
+                        self.counted_tracks[track_id] = side
+                        logger.info(f"Track {track_id} counted on {side} side immediately after detection (centroid=({centroid[0]:.1f}, {centroid[1]:.1f}), in_roi={in_roi}, history_len={history_len})")
                     
                     # Determine lane
                     lane = self._get_lane(centroid, side)
@@ -188,12 +226,16 @@ class TrafficCounter:
                     color = classify_color(frame, tuple(bbox))
                     
                     # Classify make/model
-                    make_model, make_model_conf = classify_make_model(frame, tuple(bbox))
+                    try:
+                        make_model, make_model_conf = classify_make_model(frame, tuple(bbox))
+                        if make_model:
+                            logger.debug(f"Classified vehicle {track_id} as {make_model} (confidence: {make_model_conf:.2f})")
+                    except Exception as e:
+                        logger.warning(f"Error classifying make/model for track {track_id}: {e}")
+                        make_model, make_model_conf = None, 0.0
                     
-                    # Create snapshot for left side
-                    snapshot_path = None
-                    if side == "left":
-                        snapshot_path = self._save_snapshot(frame, bbox, track_id)
+                    # Create snapshot for both sides (not just left)
+                    snapshot_path = self._save_snapshot(frame, bbox, track_id)
                     
                     # Create event
                     event = {

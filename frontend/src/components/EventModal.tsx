@@ -24,7 +24,10 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
   const getSnapshotUrl = (path: string | null) => {
     if (!path) return null
     if (path.startsWith('http')) return path
-    return path.startsWith('/') ? path : `/${path}`
+    // Ensure path starts with /snapshots/ for proper routing
+    if (path.startsWith('/snapshots/')) return path
+    if (path.startsWith('snapshots/')) return `/${path}`
+    return `/snapshots/${path.split('/').pop()}`
   }
 
   return (
@@ -41,6 +44,13 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
                 src={getSnapshotUrl(event.snapshot_path) || ''}
                 alt="Vehicle snapshot"
                 className={styles.snapshot}
+                onError={(e) => {
+                  console.error('Failed to load snapshot:', event.snapshot_path, getSnapshotUrl(event.snapshot_path))
+                  (e.target as HTMLImageElement).style.display = 'none'
+                }}
+                onLoad={() => {
+                  console.log('Snapshot loaded successfully:', event.snapshot_path)
+                }}
               />
             </div>
           )}

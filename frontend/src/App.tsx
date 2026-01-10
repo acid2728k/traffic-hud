@@ -16,16 +16,34 @@ function App() {
   const videoImgRef = useRef<HTMLImageElement>(null)
   const [videoError, setVideoError] = useState(false)
 
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log('App component mounted')
+    console.log('Current status:', status)
+    console.log('Stats:', stats)
+    console.log('Stream info:', streamInfo)
+  }, [status, stats, streamInfo])
+
   // Video stream update - moved to top level
   const updateVideoStream = useCallback(() => {
     const img = videoImgRef.current
     if (img && !videoError) {
-      // Add timestamp to bypass cache
-      img.src = `/api/video-stream?t=${Date.now()}`
+      // Add timestamp to bypass cache and force reload
+      const timestamp = Date.now()
+      img.src = `/api/video-stream?t=${timestamp}`
+      // Force reload if image fails to update
+      img.onerror = () => {
+        console.warn('Video frame failed to load, retrying...')
+        setTimeout(() => {
+          if (img && !videoError) {
+            img.src = `/api/video-stream?t=${Date.now()}`
+          }
+        }, 100)
+      }
     }
   }, [videoError])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setStatus('loading')
       const [statsData, leftData, rightData] = await Promise.all([
@@ -33,6 +51,11 @@ function App() {
         api.getEvents('left', 50),
         api.getEvents('right', 50)
       ])
+      console.log('Loaded data:', { 
+        stats: statsData, 
+        leftEvents: leftData.length, 
+        rightEvents: rightData.length 
+      })
       setStats(statsData)
       setLeftEvents(leftData)
       setRightEvents(rightData)
@@ -41,12 +64,30 @@ function App() {
       console.error('Error loading data:', error)
       setStatus('error')
     }
-  }
+  }, [])
 
+  const clearLeftEvents = useCallback(() => {
+    setLeftEvents([])
+    console.log('Left events cleared')
+  }, [])
+
+  const clearRightEvents = useCallback(() => {
+    setRightEvents([])
+    console.log('Right events cleared')
+  }, [])
+
+  // Initial data load
   useEffect(() => {
     loadData()
-    
-    // Load location information
+    // Also reload after a short delay to ensure data is fresh
+    const timeout = setTimeout(() => {
+      loadData()
+    }, 2000)
+    return () => clearTimeout(timeout)
+  }, [loadData])
+
+  // Load location information
+  useEffect(() => {
     const loadStreamInfo = async () => {
       try {
         const info = await api.getStreamInfo()
@@ -70,27 +111,48 @@ function App() {
     loadStreamInfo()
     // Update location every 30 seconds
     const streamInfoInterval = setInterval(loadStreamInfo, 30000)
+    return () => clearInterval(streamInfoInterval)
+  }, [])
 
-    // Polling fallback every 5 seconds
+  // Polling fallback for data reload - also refresh data periodically
+  useEffect(() => {
     const pollingInterval = setInterval(() => {
-      if (status === 'error' || status === 'loading') {
-        loadData()
-      }
-    }, 5000)
+      setStatus(currentStatus => {
+        if (currentStatus === 'error' || currentStatus === 'loading') {
+          loadData()
+        } else {
+          // Refresh data every 30 seconds to get latest events
+          loadData()
+        }
+        return currentStatus
+      })
+    }, 30000) // Refresh every 30 seconds
+    return () => clearInterval(pollingInterval)
+  }, [loadData])
 
-    // WebSocket connection
+  // WebSocket connection
+  useEffect(() => {
     wsService.connect()
     const unsubscribe = wsService.subscribe((message) => {
       if (message.type === 'event_created') {
         const event = message.payload as TrafficEvent
+        console.log('WebSocket event received:', { side: event.side, id: event.id })
         if (event.side === 'left') {
           setLeftEvents(prev => {
+            // Check if event already exists to avoid duplicates
+            const exists = prev.some(e => e.id === event.id)
+            if (exists) return prev
             const updated = [event, ...prev].slice(0, 50)
+            console.log('Updated left events:', updated.length)
             return updated
           })
-        } else {
+        } else if (event.side === 'right') {
           setRightEvents(prev => {
+            // Check if event already exists to avoid duplicates
+            const exists = prev.some(e => e.id === event.id)
+            if (exists) return prev
             const updated = [event, ...prev].slice(0, 50)
+            console.log('Updated right events:', updated.length)
             return updated
           })
         }
@@ -98,24 +160,24 @@ function App() {
         api.getStats().then(setStats).catch(console.error)
       }
     })
-
-    // Update frame every 100ms (~10 FPS) only if no error
-    let videoInterval: NodeJS.Timeout | null = null
-    if (!videoError) {
-      videoInterval = setInterval(updateVideoStream, 100)
-      // First load
-      updateVideoStream()
-    }
-
     return () => {
-      clearInterval(pollingInterval)
-      clearInterval(streamInfoInterval)
-      if (videoInterval) clearInterval(videoInterval)
       unsubscribe()
       wsService.disconnect()
     }
+  }, [])
+
+  // Video stream update
+  useEffect(() => {
+    if (videoError) return
+
+    const videoInterval = setInterval(updateVideoStream, 100)
+    // First load
+    updateVideoStream()
+    
+    return () => clearInterval(videoInterval)
   }, [updateVideoStream, videoError])
 
+  // Always render UI, even if data is loading
   return (
     <div className={styles.app}>
       {/* Video background with computer vision overlay */}
@@ -133,7 +195,7 @@ function App() {
             className={styles.video}
             alt="Traffic stream with detections"
             style={{ objectFit: 'cover' }}
-            onError={(e) => {
+            onError={() => {
               console.error('Video stream error, switching to YouTube fallback...')
               setVideoError(true)
             }}
@@ -144,7 +206,7 @@ function App() {
         )}
       </div>
       
-      {/* UI Overlay */}
+      {/* UI Overlay - Always visible */}
       <div className={styles.overlay}>
         <div className={styles.gridOverlay}></div>
         <div className={styles.topSection}>
@@ -158,6 +220,7 @@ function App() {
               count={stats.left.lastHourCount}
               events={leftEvents}
               side="left"
+              onClear={clearLeftEvents}
             />
           </div>
           <div className={styles.centerSpace}></div>
@@ -167,6 +230,7 @@ function App() {
               count={stats.right.lastHourCount}
               events={rightEvents}
               side="right"
+              onClear={clearRightEvents}
             />
           </div>
         </div>

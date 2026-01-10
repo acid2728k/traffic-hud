@@ -14,15 +14,45 @@
   background: rgba(0, 255, 0, 0.05);
 }
 
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
 .title {
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
   font-weight: bold;
   color: #00ff00;
   text-shadow: 0 0 5px #00ff00;
-  margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.clearButton {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid #ff0000;
+  color: #ff0000;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+  box-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
+}
+
+.clearButton:hover {
+  background: rgba(255, 0, 0, 0.4);
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  transform: scale(1.05);
+}
+
+.clearButton:active {
+  transform: scale(0.95);
 }
 
 .count {

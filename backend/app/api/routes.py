@@ -226,6 +226,8 @@ async def video_stream():
                     logger.warning("Failed to encode frame to JPEG")
             else:
                 logger.warning(f"Frame has invalid size: {frame.size if hasattr(frame, 'size') else 'no size attr'}")
+        else:
+            logger.debug("No frame available yet (current_frame_with_detections is None)")
         
         # If no frame, send status frame with text
         from app.main import ingest, detector, tracker
@@ -246,7 +248,7 @@ async def video_stream():
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
         cv2.putText(status_frame, "Check backend logs for details", (50, 260), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (128, 128, 128), 1)
-        ret, buffer = cv2.imencode('.jpg', black_frame)
+        ret, buffer = cv2.imencode('.jpg', status_frame)
         if ret:
             frame_bytes = buffer.tobytes()
             return Response(content=frame_bytes, media_type="image/jpeg")

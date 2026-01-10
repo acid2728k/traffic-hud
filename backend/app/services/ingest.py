@@ -16,7 +16,30 @@ class VideoIngest:
         self.process: Optional[subprocess.Popen] = None
         self.source_type = settings.video_source_type
         self.source_url = settings.video_source_url or settings.youtube_url
-        self.source_file = settings.video_source_file
+        # Resolve relative paths relative to backend directory
+        if settings.video_source_file:
+            if not os.path.isabs(settings.video_source_file):
+                # Get backend directory (parent of app/services directory)
+                # __file__ is at backend/app/services/ingest.py
+                # dirname(__file__) = backend/app/services
+                # dirname(dirname(__file__)) = backend/app
+                # dirname(dirname(dirname(__file__))) = backend
+                backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                # Handle .. paths correctly
+                if settings.video_source_file.startswith('../'):
+                    # Go up from backend directory
+                    parent_dir = os.path.dirname(backend_dir)
+                    relative_path = settings.video_source_file[3:]  # Remove ../
+                    self.source_file = os.path.join(parent_dir, relative_path)
+                else:
+                    # Relative to backend directory
+                    self.source_file = os.path.join(backend_dir, settings.video_source_file)
+                self.source_file = os.path.abspath(self.source_file)
+                logger.info(f"Resolved video file path: {self.source_file} (from {settings.video_source_file})")
+            else:
+                self.source_file = settings.video_source_file
+        else:
+            self.source_file = None
         self.fps = settings.fps
         self.frame_skip = max(1, int(30 / self.fps))  # Frame skip for performance
         
@@ -58,9 +81,15 @@ class VideoIngest:
     def _open_stream(self):
         """Opens video stream depending on source type"""
         if self.source_type == "file":
-            if not self.source_file or not os.path.exists(self.source_file):
+            if not self.source_file:
+                raise ValueError("Video file path not specified")
+            if not os.path.exists(self.source_file):
                 raise FileNotFoundError(f"Video file not found: {self.source_file}")
+            logger.info(f"Opening video file: {self.source_file}")
             self.cap = cv2.VideoCapture(self.source_file)
+            if not self.cap.isOpened():
+                raise ValueError(f"Failed to open video file: {self.source_file}")
+            logger.info(f"Video file opened successfully. FPS: {self.cap.get(cv2.CAP_PROP_FPS):.2f}, Frames: {int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))}")
             
         elif self.source_type == "youtube_url":
             if not self.source_url:

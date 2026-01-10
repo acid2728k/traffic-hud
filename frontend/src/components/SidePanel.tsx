@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { TrafficEvent } from '../types'
 import styles from './SidePanel.module.css'
 import { EventModal } from './EventModal'
@@ -8,10 +8,22 @@ interface SidePanelProps {
   count: number
   events: TrafficEvent[]
   side: 'left' | 'right'
+  onClear?: () => void
 }
 
-export const SidePanel: React.FC<SidePanelProps> = ({ title, count, events, side }) => {
+export const SidePanel: React.FC<SidePanelProps> = ({ title, count, events, side, onClear }) => {
   const [selectedEvent, setSelectedEvent] = useState<TrafficEvent | null>(null)
+
+  // Debug logging
+  useEffect(() => {
+    console.log(`SidePanel ${side}:`, { title, count, eventsCount: events.length, events })
+  }, [title, count, events, side])
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear()
+    }
+  }
 
   const formatTime = (ts: string) => {
     const date = new Date(ts)
@@ -28,7 +40,18 @@ export const SidePanel: React.FC<SidePanelProps> = ({ title, count, events, side
     <>
       <div className={styles.panel}>
         <div className={styles.header}>
-          <div className={styles.title}>{title}</div>
+          <div className={styles.headerTop}>
+            <div className={styles.title}>{title}</div>
+            {events.length > 0 && onClear && (
+              <button 
+                className={styles.clearButton}
+                onClick={handleClear}
+                title="Clear events list"
+              >
+                CLEAR
+              </button>
+            )}
+          </div>
           <div className={styles.count}>Last 60 min: {count}</div>
         </div>
         <div className={styles.list}>

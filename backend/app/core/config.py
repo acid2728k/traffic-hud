@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     # Video source
     video_source_type: str = "file"  # file, youtube_url, hls_url, rtsp_url
     video_source_url: Optional[str] = None
-    video_source_file: Optional[str] = None
+    video_source_file: Optional[str] = "../test_video.mp4"  # Default to test video in parent directory
     youtube_url: Optional[str] = None
     
     # Processing

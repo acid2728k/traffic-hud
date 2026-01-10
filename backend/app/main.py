@@ -10,6 +10,7 @@ from app.services.ingest import VideoIngest
 from app.services.detection import VehicleDetector
 from app.services.tracking import SimpleTracker
 from app.services.counting import TrafficCounter
+from app.services.cleanup import cleanup_old_events
 from app.core.config import settings
 import os
 
@@ -178,6 +179,10 @@ async def startup_event():
     global processing_task
     processing_task = asyncio.create_task(process_video_loop())
     logger.info("Video processing task started")
+    
+    # Start cleanup task for old events and snapshots
+    cleanup_task = asyncio.create_task(cleanup_old_events())
+    logger.info("Cleanup task started (cleans up events older than 1 minute)")
 
 
 @app.on_event("shutdown")
