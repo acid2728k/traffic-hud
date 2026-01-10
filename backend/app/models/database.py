@@ -15,6 +15,8 @@ class TrafficEvent(SQLModel, table=True):
     make_model: Optional[str] = None
     make_model_conf: Optional[float] = None
     snapshot_path: Optional[str] = None
+    plate_number: Optional[str] = None  # Recognized license plate number
+    plate_snapshot_path: Optional[str] = None  # Path to plate region snapshot
     bbox: Optional[str] = None  # JSON string: [x1, y1, x2, y2]
     track_id: int
     source_meta: Optional[str] = None  # JSON string for additional metadata

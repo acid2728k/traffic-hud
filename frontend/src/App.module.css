@@ -8,8 +8,8 @@
 .videoContainer {
   position: fixed;
   top: 0;
-  left: 280px; /* Starts after left panel */
-  width: calc(100vw - 560px); /* Width minus two panels of 280px each */
+  left: 0; /* Starts from left edge */
+  width: calc(100vw - 280px); /* Width minus right panel of 280px */
   height: 100vh;
   z-index: 0;
   background: #000;
@@ -42,18 +42,6 @@
 
 .overlay > * {
   pointer-events: auto;
-}
-
-/* Black background under left panel */
-.overlay::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 280px;
-  height: 100%;
-  background: #000;
-  z-index: 0;
 }
 
 /* Black background under right panel */
@@ -111,14 +99,13 @@
 .content {
   flex: 1;
   display: grid;
-  grid-template-columns: 280px 1fr 280px;
+  grid-template-columns: 1fr 280px;
   gap: 0;
   padding: 0;
   position: relative;
   z-index: 2;
 }
 
-.leftPanel,
 .rightPanel {
   width: 280px;
   height: calc(100vh - 80px);

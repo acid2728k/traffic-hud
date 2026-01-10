@@ -13,4 +13,5 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 aiofiles==23.2.1
 feedparser==6.0.10
+pytesseract==0.3.10
 

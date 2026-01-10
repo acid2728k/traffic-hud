@@ -108,3 +108,53 @@
   font-size: 0.85rem;
 }
 
+.plateSection {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #00ff00;
+  background: rgba(0, 255, 0, 0.05);
+}
+
+.plateLabel {
+  color: #00ff00;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.plateContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.plateImage {
+  max-width: 200px;
+  max-height: 80px;
+  border: 2px solid #00ff00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.plateImagePlaceholder {
+  width: 200px;
+  height: 80px;
+  border: 2px solid #00ff00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00ff00;
+  opacity: 0.5;
+  font-size: 0.8rem;
+}
+
+.plateNumber {
+  color: #00ff00;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 10px #00ff00;
+  font-family: 'Courier New', monospace;
+}

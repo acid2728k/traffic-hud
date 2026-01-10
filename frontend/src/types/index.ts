@@ -9,6 +9,8 @@ export interface TrafficEvent {
   make_model: string
   make_model_conf: number | null
   snapshot_path: string | null
+  plate_number: string | null
+  plate_snapshot_path: string | null
   bbox: string | null
   track_id: number
 }

@@ -54,13 +54,18 @@ current_detections = []
 async def on_new_event(event: dict):
     """Callback for new event - broadcasts via WebSocket"""
     try:
+        # Convert datetime to string for JSON serialization
+        event_copy = event.copy()
+        if 'ts' in event_copy and hasattr(event_copy['ts'], 'isoformat'):
+            event_copy['ts'] = event_copy['ts'].isoformat()
+        
         await manager.broadcast({
             "type": "event_created",
-            "payload": event
+            "payload": event_copy
         })
         logger.info(f"Broadcasted event: track_id={event.get('track_id')}, side={event.get('side')}")
     except Exception as e:
-        logger.error(f"Error broadcasting event: {e}")
+        logger.error(f"Error broadcasting event: {e}", exc_info=True)
 
 
 async def process_video_loop():

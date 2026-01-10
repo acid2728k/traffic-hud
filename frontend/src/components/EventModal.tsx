@@ -38,7 +38,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
           <button className={styles.closeButton} onClick={onClose}>×</button>
         </div>
         <div className={styles.content}>
-          {event.snapshot_path && (
+          {event.snapshot_path ? (
             <div className={styles.snapshotContainer}>
               <img
                 src={getSnapshotUrl(event.snapshot_path) || ''}
@@ -46,17 +46,55 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
                 className={styles.snapshot}
                 onError={(e) => {
                   console.error('Failed to load snapshot:', event.snapshot_path, getSnapshotUrl(event.snapshot_path))
-                  (e.target as HTMLImageElement).style.display = 'none'
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                  // Show placeholder if image fails to load
+                  const container = target.parentElement
+                  if (container) {
+                    const placeholder = document.createElement('div')
+                    placeholder.textContent = 'Photo not available'
+                    placeholder.style.cssText = 'padding: 20px; text-align: center; color: #00ff00;'
+                    container.appendChild(placeholder)
+                  }
                 }}
                 onLoad={() => {
                   console.log('Snapshot loaded successfully:', event.snapshot_path)
                 }}
               />
             </div>
+          ) : (
+            <div className={styles.snapshotContainer}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#00ff00' }}>
+                Vehicle snapshot not available
+              </div>
+            </div>
           )}
+          
+          {/* License Plate Section */}
+          <div className={styles.plateSection}>
+            <div className={styles.plateLabel}>License Plate:</div>
+            <div className={styles.plateContainer}>
+              {event.plate_snapshot_path ? (
+                <img
+                  src={getSnapshotUrl(event.plate_snapshot_path) || ''}
+                  alt="License plate"
+                  className={styles.plateImage}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              ) : (
+                <div className={styles.plateImagePlaceholder}>No plate image</div>
+              )}
+              <div className={styles.plateNumber}>
+                {event.plate_number || 'XXXXX'}
+              </div>
+            </div>
+          </div>
+          
           <div className={styles.table}>
             <div className={styles.row}>
-              <div className={styles.label}>Time:</div>
+              <div className={styles.label}>Date & Time:</div>
               <div className={styles.value}>{formatTime(event.ts)}</div>
             </div>
             <div className={styles.row}>
@@ -64,42 +102,25 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
               <div className={styles.value}>{event.side.toUpperCase()}</div>
             </div>
             <div className={styles.row}>
-              <div className={styles.label}>Lane:</div>
-              <div className={styles.value}>{event.lane}</div>
+              <div className={styles.label}>Brand:</div>
+              <div className={styles.value}>
+                {event.make_model ? event.make_model.split(' - ')[0] : 'Unknown'}
+              </div>
             </div>
             <div className={styles.row}>
-              <div className={styles.label}>Direction:</div>
-              <div className={styles.value}>{event.direction.replace('_', ' ').toUpperCase()}</div>
-            </div>
-            <div className={styles.row}>
-              <div className={styles.label}>Vehicle Type:</div>
-              <div className={styles.value}>{event.vehicle_type.toUpperCase()}</div>
+              <div className={styles.label}>Body Type:</div>
+              <div className={styles.value}>
+                {event.make_model ? (event.make_model.split(' - ')[1] || 'Vehicle') : 'Vehicle'}
+              </div>
             </div>
             <div className={styles.row}>
               <div className={styles.label}>Color:</div>
               <div className={styles.value}>{event.color.toUpperCase()}</div>
             </div>
             <div className={styles.row}>
-              <div className={styles.label}>Make/Model:</div>
-              <div className={styles.value}>
-                {event.make_model || 'Unknown'}
-                {event.make_model_conf !== null && event.make_model_conf > 0 && (
-                  <span className={styles.confidence}>
-                    {' '}({Math.round(event.make_model_conf * 100)}%)
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className={styles.row}>
-              <div className={styles.label}>Track ID:</div>
+              <div className={styles.label}>ID:</div>
               <div className={styles.value}>{event.track_id}</div>
             </div>
-            {event.bbox && (
-              <div className={styles.row}>
-                <div className={styles.label}>BBox:</div>
-                <div className={styles.value}>{event.bbox}</div>
-              </div>
-            )}
           </div>
         </div>
       </div>

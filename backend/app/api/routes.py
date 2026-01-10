@@ -73,6 +73,8 @@ async def get_events(
                 "make_model": e.make_model or "Unknown",
                 "make_model_conf": e.make_model_conf,
                 "snapshot_path": e.snapshot_path,
+                "plate_number": e.plate_number or "XXXXX",
+                "plate_snapshot_path": e.plate_snapshot_path,
                 "bbox": e.bbox,
                 "track_id": e.track_id
             }
@@ -99,6 +101,8 @@ async def get_event(event_id: int):
             "make_model": event.make_model or "Unknown",
             "make_model_conf": event.make_model_conf,
             "snapshot_path": event.snapshot_path,
+            "plate_number": event.plate_number or "XXXXX",
+            "plate_snapshot_path": event.plate_snapshot_path,
             "bbox": event.bbox,
             "track_id": event.track_id,
             "source_meta": event.source_meta

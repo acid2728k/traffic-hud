@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Header } from './components/Header'
 import { StatusBar } from './components/StatusBar'
-import { SidePanel } from './components/SidePanel'
+import { UnifiedSidePanel } from './components/SidePanel'
 import { api } from './services/api'
 import { wsService } from './services/websocket'
 import { TrafficEvent, Stats } from './types'
@@ -214,23 +214,15 @@ function App() {
           <StatusBar status={status} onRetry={loadData} location={streamInfo?.city || 'Loading...'} />
         </div>
         <div className={styles.content}>
-          <div className={styles.leftPanel}>
-            <SidePanel
-              title="TOWARD CAMERA"
-              count={stats.left.lastHourCount}
-              events={leftEvents}
-              side="left"
-              onClear={clearLeftEvents}
-            />
-          </div>
           <div className={styles.centerSpace}></div>
           <div className={styles.rightPanel}>
-            <SidePanel
-              title="AWAY FROM CAMERA"
-              count={stats.right.lastHourCount}
-              events={rightEvents}
-              side="right"
-              onClear={clearRightEvents}
+            <UnifiedSidePanel
+              leftCount={stats.left.lastHourCount}
+              rightCount={stats.right.lastHourCount}
+              leftEvents={leftEvents}
+              rightEvents={rightEvents}
+              onClearLeft={clearLeftEvents}
+              onClearRight={clearRightEvents}
             />
           </div>
         </div>

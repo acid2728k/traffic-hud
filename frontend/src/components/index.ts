@@ -1,5 +1,5 @@
 export { StatusBar } from './StatusBar'
-export { SidePanel } from './SidePanel'
+export { SidePanel, UnifiedSidePanel } from './SidePanel'
 export { EventModal } from './EventModal'
 export { StreamInfo } from './StreamInfo'
 export { Weather } from './Weather'

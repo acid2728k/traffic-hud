@@ -7,9 +7,10 @@ from datetime import datetime
 import logging
 from app.core.config import settings
 from app.models.database import TrafficEvent, get_session
-from app.utils.plate_blur import blur_plate_region
+# from app.utils.plate_blur import blur_plate_region  # Disabled - no blurring on snapshots
 from app.utils.color_classifier import classify_color
 from app.utils.make_model_classifier import classify_make_model
+from app.utils.plate_recognizer import extract_plate_region, recognize_plate_number
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,8 @@ class TrafficCounter:
         self.roi_config = self._load_roi_config()
         self.counted_tracks: Dict[int, str] = {}  # track_id -> side where it was counted ("left" or "right")
         self.track_history: Dict[int, List[Tuple[float, float]]] = {}  # track_id -> list of (x, y) centroids
+        self.track_max_area: Dict[int, float] = {}  # track_id -> maximum bbox area (for finding closest point)
+        self.snapshot_taken: Dict[int, bool] = {}  # track_id -> whether snapshot was already taken
         
     def _load_roi_config(self) -> Dict:
         """Loads ROI configuration from JSON"""
@@ -196,6 +199,20 @@ class TrafficCounter:
             if side is None:
                 continue
             
+            # Calculate bbox area (for determining closest point to camera)
+            bbox_area = (x2 - x1) * (y2 - y1)
+            
+            # Track maximum area for this track_id (closest to camera = largest area)
+            max_area_updated = False
+            if track_id not in self.track_max_area:
+                self.track_max_area[track_id] = bbox_area
+                max_area_updated = True
+            else:
+                # Update max area if current is larger
+                if bbox_area > self.track_max_area[track_id]:
+                    self.track_max_area[track_id] = bbox_area
+                    max_area_updated = True
+            
             # Check if vehicle should be counted
             # Only count if not already counted, or if counted on different side (shouldn't happen, but safety check)
             already_counted_side = self.counted_tracks.get(track_id)
@@ -225,17 +242,40 @@ class TrafficCounter:
                     # Classify color
                     color = classify_color(frame, tuple(bbox))
                     
-                    # Classify make/model
+                    # Classify make/model (returns brand and body type)
                     try:
-                        make_model, make_model_conf = classify_make_model(frame, tuple(bbox))
-                        if make_model:
-                            logger.debug(f"Classified vehicle {track_id} as {make_model} (confidence: {make_model_conf:.2f})")
+                        classification = classify_make_model(frame, tuple(bbox))
+                        brand = classification.get("brand", "Unknown")
+                        body_type = classification.get("body_type", "Vehicle")
+                        make_model_conf = classification.get("confidence", 0.2)
+                        # Store as "Brand - BodyType" for compatibility
+                        make_model = f"{brand} - {body_type}"
+                        logger.info(f"Classified vehicle {track_id} as {brand} {body_type} (confidence: {make_model_conf:.2f})")
                     except Exception as e:
                         logger.warning(f"Error classifying make/model for track {track_id}: {e}")
-                        make_model, make_model_conf = None, 0.0
+                        make_model, make_model_conf = "Unknown - Vehicle", 0.2
                     
-                    # Create snapshot for both sides (not just left)
-                    snapshot_path = self._save_snapshot(frame, bbox, track_id)
+                    # Create snapshot only once, when vehicle is closest to camera (maximum area)
+                    snapshot_path = None
+                    snapshot_already_taken = self.snapshot_taken.get(track_id, False)
+                    
+                    # Take snapshot only if:
+                    # 1. Snapshot not taken yet for this track_id
+                    # 2. Current area is at least 95% of maximum area (vehicle is close to closest point)
+                    # OR we just updated the maximum area (we're at a new closest point)
+                    max_area = self.track_max_area.get(track_id, bbox_area)
+                    snapshot_path = None
+                    plate_number = None
+                    plate_snapshot_path = None
+                    
+                    if not snapshot_already_taken:
+                        # Take snapshot if we're at 95%+ of max area, or if we just set a new maximum
+                        if bbox_area >= max_area * 0.95 or max_area_updated:
+                            snapshot_path, plate_number, plate_snapshot_path = self._save_snapshot(frame, bbox, track_id)
+                            self.snapshot_taken[track_id] = True
+                            logger.info(f"Snapshot taken for track {track_id} at closest point (area={bbox_area:.0f}, max_area={max_area:.0f}, updated={max_area_updated})")
+                            if plate_number:
+                                logger.info(f"Plate number for track {track_id}: {plate_number}")
                     
                     # Create event
                     event = {
@@ -245,9 +285,11 @@ class TrafficCounter:
                         "direction": self.roi_config[f"{side}_side"]["direction"],
                         "vehicle_type": vehicle_type,
                         "color": color,
-                        "make_model": make_model if make_model else "Unknown",
+                        "make_model": make_model or "Vehicle",
                         "make_model_conf": make_model_conf,
                         "snapshot_path": snapshot_path,
+                        "plate_number": plate_number or "XXXXX",
+                        "plate_snapshot_path": plate_snapshot_path,
                         "bbox": json.dumps(bbox),
                         "track_id": track_id,
                         "source_meta": json.dumps({"confidence": det.get("confidence", 0.0)})
@@ -263,8 +305,11 @@ class TrafficCounter:
         
         return events
     
-    def _save_snapshot(self, frame: np.ndarray, bbox: List[int], track_id: int) -> str:
-        """Saves snapshot with license plate blurring"""
+    def _save_snapshot(self, frame: np.ndarray, bbox: List[int], track_id: int) -> Tuple[str, Optional[str], Optional[str]]:
+        """
+        Saves snapshot and plate region.
+        Returns: (snapshot_path, plate_number, plate_snapshot_path)
+        """
         x1, y1, x2, y2 = bbox
         # Add small padding
         padding = 10
@@ -276,16 +321,42 @@ class TrafficCounter:
         
         snapshot = frame[y1:y2, x1:x2].copy()
         
-        # Blur license plate
-        snapshot = blur_plate_region(snapshot, (0, 0, x2 - x1, y2 - y1))
-        
-        # Save
+        # Save vehicle snapshot
         os.makedirs(settings.snapshots_dir, exist_ok=True)
-        filename = f"snapshot_{track_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')
+        filename = f"snapshot_{track_id}_{timestamp}.jpg"
         filepath = os.path.join(settings.snapshots_dir, filename)
         cv2.imwrite(filepath, snapshot)
+        snapshot_path = f"/snapshots/{filename}"
         
-        return f"/snapshots/{filename}"
+        # Extract and save plate region (always save, even if recognition fails)
+        plate_number = None
+        plate_snapshot_path = None
+        
+        try:
+            plate_roi = extract_plate_region(frame, bbox)
+            if plate_roi is not None and plate_roi.size > 0:
+                # Always save plate snapshot
+                plate_filename = f"plate_{track_id}_{timestamp}.jpg"
+                plate_filepath = os.path.join(settings.snapshots_dir, plate_filename)
+                cv2.imwrite(plate_filepath, plate_roi)
+                plate_snapshot_path = f"/snapshots/{plate_filename}"
+                
+                # Try to recognize plate number
+                plate_number = recognize_plate_number(plate_roi)
+                if plate_number and plate_number != "XXXXX":
+                    logger.info(f"Recognized plate number for track {track_id}: {plate_number}")
+                else:
+                    plate_number = "XXXXX"
+                    logger.debug(f"Could not recognize plate number for track {track_id}")
+            else:
+                # If plate region not found, set default
+                plate_number = "XXXXX"
+        except Exception as e:
+            logger.warning(f"Error processing plate for track {track_id}: {e}")
+            plate_number = "XXXXX"
+        
+        return snapshot_path, plate_number, plate_snapshot_path
     
     def _save_event(self, event: Dict):
         """Saves event to database"""
