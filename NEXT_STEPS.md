@@ -1,84 +1,84 @@
-# Что делать дальше? 🚀
+# What's Next? 🚀
 
-## ✅ Проект готов к запуску!
+## ✅ Project is Ready to Launch!
 
-Все файлы созданы, конфигурация настроена. Теперь можно запускать систему.
+All files are created, configuration is set up. Now you can run the system.
 
-## 📝 Пошаговый план действий
+## 📝 Step-by-Step Action Plan
 
-### Шаг 1: Получить тестовое видео (5 минут)
+### Step 1: Get Test Video (5 minutes)
 
-**Вариант A: Использовать существующее видео**
+**Option A: Use existing video**
 ```bash
-# Поместите ваш видеофайл в backend/
+# Place your video file in backend/
 cp /path/to/your/traffic_video.mp4 backend/test_video.mp4
 ```
 
-**Вариант B: Скачать тестовое видео**
+**Option B: Download test video**
 ```bash
 cd backend
 ./download_test_video.sh
 ```
 
-**Вариант C: Использовать YouTube Live**
-Отредактируйте `backend/.env`:
+**Option C: Use YouTube Live**
+Edit `backend/.env`:
 ```env
 VIDEO_SOURCE_TYPE=youtube_url
 YOUTUBE_URL=https://www.youtube.com/watch?v=H0Z6faxNLCI
 ```
 
-### Шаг 2: Запустить систему (2 минуты)
+### Step 2: Start System (2 minutes)
 
 ```bash
-# Из корневой директории проекта
+# From project root directory
 docker compose up --build
 ```
 
-Это займет несколько минут при первом запуске (скачивание образов, установка зависимостей).
+This will take several minutes on first run (downloading images, installing dependencies).
 
-### Шаг 3: Открыть в браузере
+### Step 3: Open in Browser
 
-- **Frontend (HUD интерфейс)**: http://localhost:3000
-- **API документация**: http://localhost:8000/docs
+- **Frontend (HUD interface)**: http://localhost:3000
+- **API documentation**: http://localhost:8000/docs
 - **Health check**: http://localhost:8000/health
 
-### Шаг 4: Проверить работу
+### Step 4: Verify Operation
 
-1. ✅ Проверьте статус: должен быть "STREAM: LIVE"
-2. ✅ Наблюдайте события в панелях (левая/правая сторона)
-3. ✅ Кликните на событие для просмотра деталей
-4. ✅ Проверьте статистику "Last 60 min"
+1. ✅ Check status: should be "STREAM: LIVE"
+2. ✅ Observe events in panels (left/right side)
+3. ✅ Click on event to view details
+4. ✅ Check "Last 60 min" statistics
 
-### Шаг 5: Калибровка ROI (если нужно)
+### Step 5: ROI Calibration (if needed)
 
-Если подсчет неправильный или нет детекций:
+If counting is incorrect or no detections:
 
-1. Откройте `backend/roi_config.json`
-2. Настройте координаты под ваше видео
-3. См. [CALIBRATION.md](./CALIBRATION.md) для подробностей
-4. Перезапустите: `docker compose restart backend`
+1. Open `backend/roi_config.json`
+2. Configure coordinates for your video
+3. See [CALIBRATION.md](./CALIBRATION.md) for details
+4. Restart: `docker compose restart backend`
 
-## 🔧 Настройка параметров
+## 🔧 Parameter Configuration
 
-### Изменить FPS обработки
+### Change Processing FPS
 
-В `backend/.env`:
+In `backend/.env`:
 ```env
-FPS=10  # Можно увеличить до 15 для более мощного CPU
+FPS=10  # Can be increased to 15 for more powerful CPU
 ```
 
-### Изменить порог детекции
+### Change Detection Threshold
 
-В `backend/.env`:
+In `backend/.env`:
 ```env
-CONFIDENCE_THRESHOLD=0.25  # Снизьте до 0.15 для больше детекций
+CONFIDENCE_THRESHOLD=0.25  # Lower to 0.15 for more detections
 ```
 
-### Изменить источник видео
+### Change Video Source
 
-В `backend/.env`:
+In `backend/.env`:
 ```env
-# Локальный файл
+# Local file
 VIDEO_SOURCE_TYPE=file
 VIDEO_SOURCE_FILE=./test_video.mp4
 
@@ -86,34 +86,34 @@ VIDEO_SOURCE_FILE=./test_video.mp4
 VIDEO_SOURCE_TYPE=youtube_url
 YOUTUBE_URL=https://www.youtube.com/watch?v=...
 
-# HLS поток
+# HLS stream
 VIDEO_SOURCE_TYPE=hls_url
 VIDEO_SOURCE_URL=https://example.com/stream.m3u8
 
-# RTSP поток
+# RTSP stream
 VIDEO_SOURCE_TYPE=rtsp_url
 VIDEO_SOURCE_URL=rtsp://example.com/stream
 ```
 
-## 📚 Полезные команды
+## 📚 Useful Commands
 
-### Просмотр логов
+### View Logs
 ```bash
 docker compose logs -f backend
 docker compose logs -f frontend
 ```
 
-### Остановка системы
+### Stop System
 ```bash
 docker compose down
 ```
 
-### Перезапуск после изменений
+### Restart After Changes
 ```bash
 docker compose restart backend
 ```
 
-### Полная пересборка
+### Full Rebuild
 ```bash
 docker compose down
 docker compose up --build
@@ -121,48 +121,47 @@ docker compose up --build
 
 ## 🐛 Troubleshooting
 
-### Проблема: Видео не загружается
+### Issue: Video not loading
 ```bash
-# Проверьте путь к файлу
+# Check file path
 ls -la backend/test_video.mp4
 
-# Проверьте логи
+# Check logs
 docker compose logs backend | grep -i error
 ```
 
-### Проблема: Нет детекций
-1. Убедитесь, что ROI настроен правильно
-2. Снизьте `CONFIDENCE_THRESHOLD` до 0.15
-3. Проверьте, что в видео есть транспортные средства
+### Issue: No detections
+1. Ensure ROI is configured correctly
+2. Try lowering `CONFIDENCE_THRESHOLD` to 0.15
+3. Check that video contains vehicles
 
-### Проблема: Неправильный подсчет
-1. Перекалибруйте ROI (см. CALIBRATION.md)
-2. Проверьте направление движения в roi_config.json
-3. Убедитесь, что counting line на пути движения
+### Issue: Incorrect counting
+1. Recalibrate ROI (see CALIBRATION.md)
+2. Check movement direction in roi_config.json
+3. Ensure counting line is on movement path
 
-## 📖 Документация
+## 📖 Documentation
 
-- **[README.md](./README.md)** - Полная документация проекта
-- **[QUICK_START.md](./QUICK_START.md)** - Быстрый старт
-- **[TESTING.md](./TESTING.md)** - Подробное руководство по тестированию
-- **[CALIBRATION.md](./CALIBRATION.md)** - Калибровка ROI
+- **[README.md](./README.md)** - Full project documentation
+- **[QUICK_START.md](./QUICK_START.md)** - Quick start
+- **[TESTING.md](./TESTING.md)** - Detailed testing guide
+- **[CALIBRATION.md](./CALIBRATION.md)** - ROI calibration
 
-## 🎯 Что дальше после запуска?
+## 🎯 What's Next After Launch?
 
-1. **Тестирование**: Проверьте работу на разных видео
-2. **Калибровка**: Настройте ROI под ваше конкретное видео
-3. **Оптимизация**: Настройте FPS и пороги под ваше железо
-4. **Мониторинг**: Наблюдайте за производительностью
-5. **Улучшения**: Добавьте свои фичи (если нужно)
+1. **Testing**: Test operation on different videos
+2. **Calibration**: Configure ROI for your specific video
+3. **Optimization**: Configure FPS and thresholds for your hardware
+4. **Monitoring**: Monitor performance
+5. **Improvements**: Add your features (if needed)
 
-## 💡 Советы
+## 💡 Tips
 
-- Начните с локального видеофайла для тестирования
-- Используйте короткие видео (1-2 минуты) для быстрой проверки
-- Калибруйте ROI постепенно: сначала одну сторону, потом другую
-- Сохраняйте рабочие конфигурации ROI для разных камер
+- Start with local video file for testing
+- Use short videos (1-2 minutes) for quick verification
+- Calibrate ROI gradually: first one side, then the other
+- Save working ROI configurations for different cameras
 
 ---
 
-**Готовы начать?** Запустите `docker compose up --build` и откройте http://localhost:3000! 🚀
-
+**Ready to start?** Run `docker compose up --build` and open http://localhost:3000! 🚀

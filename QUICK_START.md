@@ -1,107 +1,106 @@
-# Быстрый старт Traffic HUD
+# Traffic HUD Quick Start
 
-## Шаг 1: Настройка окружения
+## Step 1: Environment Setup
 
 ```bash
 cd backend
 cp .env.example .env
-# Отредактируйте .env при необходимости
+# Edit .env if needed
 ```
 
-## Шаг 2: Получение тестового видео
+## Step 2: Get Test Video
 
-### Вариант A: Использовать существующее видео
+### Option A: Use Existing Video
 
-Поместите видеофайл в `backend/test_video.mp4`:
+Place video file in `backend/test_video.mp4`:
 
 ```bash
 cp /path/to/your/video.mp4 backend/test_video.mp4
 ```
 
-### Вариант B: Скачать тестовое видео
+### Option B: Download Test Video
 
 ```bash
 cd backend
 ./download_test_video.sh
 ```
 
-### Вариант C: Использовать YouTube Live
+### Option C: Use YouTube Live
 
-В `backend/.env` установите:
+In `backend/.env` set:
 
 ```env
 VIDEO_SOURCE_TYPE=youtube_url
 YOUTUBE_URL=https://www.youtube.com/watch?v=H0Z6faxNLCI
 ```
 
-## Шаг 3: Калибровка ROI (опционально)
+## Step 3: ROI Calibration (Optional)
 
-Если используете свое видео, откройте `backend/roi_config.json` и настройте координаты под ваше видео.
+If using your own video, open `backend/roi_config.json` and configure coordinates for your video.
 
-См. [CALIBRATION.md](./CALIBRATION.md) для подробных инструкций.
+See [CALIBRATION.md](./CALIBRATION.md) for detailed instructions.
 
-## Шаг 4: Запуск
+## Step 4: Launch
 
 ```bash
-# Из корневой директории проекта
+# From project root directory
 docker compose up --build
 ```
 
-## Шаг 5: Открыть в браузере
+## Step 5: Open in Browser
 
 - Frontend: http://localhost:3000
 - API Docs: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
 
-## Настройка параметров
+## Parameter Configuration
 
-Отредактируйте `backend/.env`:
+Edit `backend/.env`:
 
 ```env
-# FPS обработки (рекомендуется 10 для CPU, можно увеличить до 15)
+# Processing FPS (recommended 10 for CPU, can increase to 15)
 FPS=10
 
-# Порог уверенности детекции (0.15-0.5, чем ниже - тем больше детекций)
+# Detection confidence threshold (0.15-0.5, lower = more detections)
 CONFIDENCE_THRESHOLD=0.25
 
-# TTL событий в часах (сколько хранить события)
+# Event TTL in hours (how long to store events)
 EVENT_TTL_HOURS=24
 ```
 
-## Проверка работы
+## Verification
 
-1. Откройте http://localhost:3000
-2. Проверьте статус: должен быть "STREAM: LIVE"
-3. Наблюдайте события в панелях
-4. Кликните на событие для просмотра деталей
+1. Open http://localhost:3000
+2. Check status: should be "STREAM: LIVE"
+3. Observe events in panels
+4. Click on event to view details
 
 ## Troubleshooting
 
-### Видео не загружается
+### Video not loading
 
 ```bash
-# Проверьте путь к файлу
+# Check file path
 ls -la backend/test_video.mp4
 
-# Проверьте логи
+# Check logs
 docker compose logs backend
 ```
 
-### Нет детекций
+### No detections
 
-1. Убедитесь, что ROI настроен правильно
-2. Попробуйте снизить `CONFIDENCE_THRESHOLD` до 0.15
-3. Проверьте, что в видео есть транспортные средства
+1. Ensure ROI is configured correctly
+2. Try lowering `CONFIDENCE_THRESHOLD` to 0.15
+3. Check that video contains vehicles
 
-### Неправильный подсчет
+### Incorrect counting
 
-1. Перекалибруйте ROI (см. CALIBRATION.md)
-2. Проверьте направление движения в roi_config.json
-3. Убедитесь, что counting line находится на пути движения
+1. Recalibrate ROI (see CALIBRATION.md)
+2. Check movement direction in roi_config.json
+3. Ensure counting line is on movement path
 
-## Дополнительная документация
+## Additional Documentation
 
-- [README.md](./README.md) - Полная документация
-- [CALIBRATION.md](./CALIBRATION.md) - Калибровка ROI
-- [TESTING.md](./TESTING.md) - Подробное руководство по тестированию
-
+- [README.md](./README.md) - Full documentation
+- [CALIBRATION.md](./CALIBRATION.md) - ROI calibration
+- [TESTING.md](./TESTING.md) - Detailed testing guide

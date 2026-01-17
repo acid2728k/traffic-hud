@@ -1,93 +1,93 @@
-# Руководство по тестированию Traffic HUD
+# Traffic HUD Testing Guide
 
-## Подготовка тестового видео
+## Test Video Preparation
 
-### Вариант 1: Использовать готовое видео
+### Option 1: Use Existing Video
 
-Поместите видеофайл с дорожным движением в `backend/test_video.mp4`:
+Place a video file with traffic in `backend/test_video.mp4`:
 
 ```bash
-# Пример: скопируйте существующее видео
+# Example: copy existing video
 cp /path/to/your/traffic_video.mp4 backend/test_video.mp4
 ```
 
-### Вариант 2: Скачать с YouTube
+### Option 2: Download from YouTube
 
-Используйте скрипт (требуется yt-dlp):
+Use the script (requires yt-dlp):
 
 ```bash
 cd backend
 ./download_test_video.sh
 ```
 
-Или вручную:
+Or manually:
 
 ```bash
 cd backend
 yt-dlp -f "best[ext=mp4]" "YOUTUBE_URL" -o test_video.mp4
 ```
 
-### Вариант 3: Использовать YouTube Live
+### Option 3: Use YouTube Live
 
-В `.env` установите:
+In `.env` set:
 
 ```env
 VIDEO_SOURCE_TYPE=youtube_url
 YOUTUBE_URL=https://www.youtube.com/watch?v=H0Z6faxNLCI
 ```
 
-## Настройка .env
+## .env Configuration
 
-1. Откройте `backend/.env`:
+1. Open `backend/.env`:
 
 ```bash
 cd backend
-nano .env  # или используйте любой редактор
+nano .env  # or use any editor
 ```
 
-2. Настройте параметры:
+2. Configure parameters:
 
 ```env
-# Для локального файла
+# For local file
 VIDEO_SOURCE_TYPE=file
 VIDEO_SOURCE_FILE=./test_video.mp4
 
-# FPS обработки (рекомендуется 10 для CPU)
+# Processing FPS (recommended 10 for CPU)
 FPS=10
 
-# Порог уверенности детекции (0.0-1.0, чем выше - тем строже)
+# Detection confidence threshold (0.0-1.0, higher = stricter)
 CONFIDENCE_THRESHOLD=0.25
 
-# TTL событий в часах
+# Event TTL in hours
 EVENT_TTL_HOURS=24
 ```
 
-## Калибровка ROI
+## ROI Calibration
 
-1. **Запустите систему** (см. ниже)
-2. **Откройте видео** в видеоплеере с координатами мыши
-3. **Определите координаты**:
-   - Области дороги (ROI)
-   - Линии подсчета
-   - Полос движения
-4. **Отредактируйте** `backend/roi_config.json`
-5. **Перезапустите** систему
+1. **Start the system** (see below)
+2. **Open video** in video player with mouse coordinates
+3. **Determine coordinates**:
+   - Road areas (ROI)
+   - Counting lines
+   - Traffic lanes
+4. **Edit** `backend/roi_config.json`
+5. **Restart** the system
 
-Подробнее: см. [CALIBRATION.md](./CALIBRATION.md)
+For details: see [CALIBRATION.md](./CALIBRATION.md)
 
-## Запуск тестирования
+## Starting Tests
 
-### Через Docker (рекомендуется)
+### Via Docker (recommended)
 
 ```bash
-# Из корневой директории проекта
+# From project root directory
 docker compose up --build
 
-# В другом терминале проверьте логи
+# In another terminal check logs
 docker compose logs -f backend
 ```
 
-### Локально (для разработки)
+### Locally (for development)
 
 #### Backend:
 
@@ -97,7 +97,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Убедитесь, что .env настроен
+# Ensure .env is configured
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -109,115 +109,114 @@ npm install
 npm run dev
 ```
 
-## Проверка работы
+## Verification
 
-1. **Откройте браузер**: http://localhost:3000
-2. **Проверьте статус**: Должен быть "STREAM: LIVE"
-3. **Наблюдайте события**: Должны появляться в левой/правой панелях
-4. **Проверьте статистику**: "Last 60 min" должен обновляться
-5. **Откройте детали**: Кликните на событие для просмотра деталей
+1. **Open browser**: http://localhost:3000
+2. **Check status**: Should be "STREAM: LIVE"
+3. **Observe events**: Should appear in left/right panels
+4. **Check statistics**: "Last 60 min" should update
+5. **Open details**: Click on event to view details
 
-## Проверка API
+## API Testing
 
 ```bash
-# Статистика
+# Statistics
 curl http://localhost:8000/api/stats
 
-# События
+# Events
 curl http://localhost:8000/api/events?side=left&limit=10
 
-# Детали события
+# Event details
 curl http://localhost:8000/api/events/1
 ```
 
-## Отладка
+## Debugging
 
-### Проблема: Нет детекций
+### Issue: No detections
 
-1. Проверьте логи backend:
+1. Check backend logs:
    ```bash
    docker compose logs backend
    ```
 
-2. Убедитесь, что:
-   - Видео загружается (проверьте путь в .env)
-   - ROI настроен правильно
-   - CONFIDENCE_THRESHOLD не слишком высокий
+2. Ensure that:
+   - Video is loading (check path in .env)
+   - ROI is configured correctly
+   - CONFIDENCE_THRESHOLD is not too high
 
-3. Попробуйте снизить порог:
+3. Try lowering threshold:
    ```env
    CONFIDENCE_THRESHOLD=0.15
    ```
 
-### Проблема: Неправильный подсчет
+### Issue: Incorrect counting
 
-1. Проверьте `roi_config.json`:
-   - Координаты соответствуют разрешению видео
-   - Counting line находится на пути движения
-   - Направление правильное (toward_camera/away_from_camera)
+1. Check `roi_config.json`:
+   - Coordinates match video resolution
+   - Counting line is on movement path
+   - Direction is correct (toward_camera/away_from_camera)
 
-2. Визуализируйте ROI (можно добавить отладочный режим)
+2. Visualize ROI (can add debug mode)
 
-### Проблема: Видео не загружается
+### Issue: Video not loading
 
-1. Проверьте путь к файлу:
+1. Check file path:
    ```bash
    ls -la backend/test_video.mp4
    ```
 
-2. Для YouTube: убедитесь, что URL доступен
+2. For YouTube: ensure URL is accessible
 
-3. Проверьте формат: поддерживаются mp4, avi, mov, mkv
+3. Check format: supported formats are mp4, avi, mov, mkv
 
-## Тестовые сценарии
+## Test Scenarios
 
-### 1. Базовый тест
+### 1. Basic Test
 
-- ✅ Система запускается
-- ✅ Видео загружается
-- ✅ Детекции работают
-- ✅ События создаются
-- ✅ UI обновляется
+- ✅ System starts
+- ✅ Video loads
+- ✅ Detections work
+- ✅ Events are created
+- ✅ UI updates
 
-### 2. Тест подсчета
+### 2. Counting Test
 
-- ✅ События создаются при пересечении линии
-- ✅ Правильная сторона (left/right)
-- ✅ Правильная полоса (1/2/3)
-- ✅ Статистика обновляется
+- ✅ Events created when crossing line
+- ✅ Correct side (left/right)
+- ✅ Correct lane (1/2/3)
+- ✅ Statistics update
 
-### 3. Тест snapshots
+### 3. Snapshots Test
 
-- ✅ Snapshots создаются для left side
-- ✅ Номера размыты
-- ✅ Snapshots отображаются в UI
-- ✅ Modal открывается с деталями
+- ✅ Snapshots created for left side
+- ✅ License plates recognized (or "XXXXX" if not)
+- ✅ Snapshots displayed in UI
+- ✅ Modal opens with details
 
-### 4. Тест real-time
+### 4. Real-time Test
 
-- ✅ WebSocket подключение
-- ✅ События приходят в реальном времени
-- ✅ Fallback на polling при отключении WS
+- ✅ WebSocket connection
+- ✅ Events arrive in real-time
+- ✅ Fallback to polling when WS disconnected
 
-## Производительность
+## Performance
 
-Ожидаемые показатели на CPU:
+Expected metrics on CPU:
 
-- **FPS обработки**: 5-12 FPS (зависит от CPU)
-- **Задержка детекции**: 100-300ms на кадр
-- **Память**: ~500MB-1GB (зависит от модели YOLO)
+- **Processing FPS**: 5-12 FPS (depends on CPU)
+- **Detection latency**: 100-300ms per frame
+- **Memory**: ~500MB-1GB (depends on YOLO model)
 
-Для улучшения производительности:
+To improve performance:
 
-- Используйте GPU (CUDA) для YOLOv8
-- Уменьшите FPS в .env
-- Используйте меньшую модель YOLO (yolov8n.pt уже самый маленький)
+- Use GPU (CUDA) for YOLOv8
+- Reduce FPS in .env
+- Use smaller YOLO model (yolov8n.pt is already the smallest)
 
-## Следующие шаги после тестирования
+## Next Steps After Testing
 
-1. ✅ Калибровка ROI под ваше видео
-2. ✅ Настройка FPS и порогов
-3. ✅ Тестирование на реальном потоке
-4. ✅ Мониторинг производительности
-5. ✅ Настройка очистки данных (TTL)
-
+1. ✅ Calibrate ROI for your video
+2. ✅ Configure FPS and thresholds
+3. ✅ Test on real stream
+4. ✅ Monitor performance
+5. ✅ Configure data cleanup (TTL)

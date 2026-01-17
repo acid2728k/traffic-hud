@@ -1,52 +1,51 @@
-# Инструкция по созданию репозитория на GitHub
+# GitHub Repository Setup Guide
 
-## Способ 1: Использование скрипта (рекомендуется)
+## Method 1: Using Script (Recommended)
 
-1. Получите GitHub Personal Access Token:
-   - Перейдите на https://github.com/settings/tokens
-   - Нажмите "Generate new token" -> "Generate new token (classic)"
-   - Выберите права: `repo` (полный доступ к репозиториям)
-   - Скопируйте токен
+1. Get GitHub Personal Access Token:
+   - Go to https://github.com/settings/tokens
+   - Click "Generate new token" -> "Generate new token (classic)"
+   - Select permissions: `repo` (full access to repositories)
+   - Copy the token
 
-2. Запустите скрипт:
+2. Run the script:
    ```bash
    ./create-github-repo.sh YOUR_GITHUB_TOKEN
    ```
 
-## Способ 2: Через веб-интерфейс GitHub
+## Method 2: Via GitHub Web Interface
 
-1. Перейдите на https://github.com/new
-2. Заполните форму:
+1. Go to https://github.com/new
+2. Fill in the form:
    - **Repository name**: `traffic-hud`
-   - **Description**: `TRAFFIC HUD - система отображения информации о дорожном движении`
-   - **Visibility**: Public (или Private, по вашему выбору)
-   - **НЕ** создавайте README, .gitignore или лицензию (они уже есть)
-3. Нажмите "Create repository"
+   - **Description**: `TRAFFIC HUD - real-time traffic counting and analysis system with HUD interface`
+   - **Visibility**: Public (or Private, your choice)
+   - **DO NOT** create README, .gitignore or license (they already exist)
+3. Click "Create repository"
 
-4. После создания репозитория выполните команды:
+4. After creating repository, run commands:
    ```bash
    git remote add origin https://github.com/YOUR_USERNAME/traffic-hud.git
    git branch -M main
    git push -u origin main
    ```
 
-## Способ 3: Установка GitHub CLI
+## Method 3: Using GitHub CLI
 
-1. Установите GitHub CLI:
+1. Install GitHub CLI:
    ```bash
-   # macOS (через Homebrew)
+   # macOS (via Homebrew)
    brew install gh
    
-   # Или скачайте с https://cli.github.com/
+   # Or download from https://cli.github.com/
    ```
 
-2. Авторизуйтесь:
+2. Authenticate:
    ```bash
    gh auth login
    ```
 
-3. Создайте репозиторий:
+3. Create repository:
    ```bash
-   gh repo create traffic-hud --public --description "TRAFFIC HUD - система отображения информации о дорожном движении" --source=. --remote=origin --push
+   gh repo create traffic-hud --public --description "TRAFFIC HUD - real-time traffic counting and analysis system with HUD interface" --source=. --remote=origin --push
    ```
-
